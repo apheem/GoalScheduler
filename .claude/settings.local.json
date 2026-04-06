@@ -11,7 +11,8 @@
       "Bash(curl -s http://localhost:3001/api/people)",
       "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f\"\"{p[''''name'''']}: workDays={p[''''workDays'''']}, hours={p[''''startHour'''']}-{p[''''endHour'''']}, maxMin={p[''''maxMinutesPerDay'''']}\"\"\\) for p in data]\")",
       "Bash(curl -s http://localhost:3001/api/projects)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(npm run:*)"
     ]
   }
 }
