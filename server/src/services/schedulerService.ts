@@ -35,6 +35,7 @@ export interface TaskToSchedule {
   // Per-person tracking
   assigneeKeys?: string[];          // all assignee IDs — used for daily minutes tracking per person
   maxMinutesPerDay?: number | null;  // person's daily cap
+  projectPriority?: number;         // 1=most important, 5=least important (default 3)
 }
 
 export interface ScheduledBlock {
@@ -143,10 +144,14 @@ function topoSort(tasks: TaskToSchedule[], defaultWorkDayCount: number): TaskToS
     sorted.push(task);
   }
 
-  // Sort by: most constrained (fewest allowed days) first, then priority, deadline, order
-  // This ensures Monday-only tasks grab Monday slots before Mon-Sat tasks do
+  // Sort by: project priority first (lower = more important), then most constrained
+  // (fewest allowed days), then task priority, deadline, order.
+  // This ensures higher-priority projects get scheduled first.
   const priorityRank: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
   const byConstraint = [...tasks].sort((a, b) => {
+    const aProjPri = a.projectPriority ?? 3;
+    const bProjPri = b.projectPriority ?? 3;
+    if (aProjPri !== bProjPri) return aProjPri - bProjPri; // lower number = higher priority
     const aDays = a.allowedDays?.length ?? defaultWorkDayCount;
     const bDays = b.allowedDays?.length ?? defaultWorkDayCount;
     if (aDays !== bDays) return aDays - bDays; // fewer days = schedule first

@@ -44,6 +44,7 @@ router.post('/', async (req, res) => {
         status: 'pending',
         weekOf,
         createdAt: Date.now(),
+        projectPriority: 3,
       }).run();
 
       const createdTasks = [];

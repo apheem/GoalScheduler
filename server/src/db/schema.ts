@@ -8,6 +8,7 @@ export const projects = sqliteTable('projects', {
   weekOf: text('week_of').notNull(),
   createdAt: integer('created_at').notNull(),
   deadline: text('deadline'),
+  projectPriority: integer('project_priority').notNull().default(3),
   allowedDays: text('allowed_days'),       // JSON array or null
   allowedStartHour: integer('allowed_start_hour'),
   allowedEndHour: integer('allowed_end_hour'),

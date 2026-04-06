@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { db } from '../db';
 import { projects, tasks, taskBlocks } from '../db/schema';
 
@@ -32,12 +33,13 @@ router.get('/', (req, res) => {
 // PATCH /api/projects/:id — update project settings
 router.patch('/:id', (req, res) => {
   const { id } = req.params;
-  const { deadline, allowedDays, allowedStartHour, allowedEndHour } = req.body;
+  const { deadline, allowedDays, allowedStartHour, allowedEndHour, projectPriority } = req.body;
   const update: Record<string, unknown> = {};
   if ('deadline' in req.body) update.deadline = deadline ?? null;
   if ('allowedDays' in req.body) update.allowedDays = allowedDays ? JSON.stringify(allowedDays) : null;
   if ('allowedStartHour' in req.body) update.allowedStartHour = allowedStartHour ?? null;
   if ('allowedEndHour' in req.body) update.allowedEndHour = allowedEndHour ?? null;
+  if ('projectPriority' in req.body) update.projectPriority = projectPriority ?? 3;
   if (Object.keys(update).length) {
     db.update(projects).set(update as any).where(eq(projects.id, id)).run();
   }
@@ -81,6 +83,92 @@ router.delete('/:id', (req, res) => {
   db.delete(tasks).where(eq(tasks.projectId, id)).run();
   db.delete(projects).where(eq(projects.id, id)).run();
   res.json({ ok: true });
+});
+
+// POST /api/projects/manual — create a project with user-defined steps (skip AI)
+router.post('/manual', (req, res) => {
+  const { title, deadline, projectPriority, tasks: inputTasks } = req.body as {
+    title: string;
+    deadline?: string | null;
+    projectPriority?: number;
+    tasks: Array<{ title: string; estimatedMinutes: number }>;
+  };
+
+  if (!title || !Array.isArray(inputTasks) || inputTasks.length === 0) {
+    res.status(400).json({ error: 'title and at least one task are required' });
+    return;
+  }
+
+  const projectId = randomUUID();
+  const now = Date.now();
+  const weekOf = new Date().toISOString().slice(0, 10);
+
+  db.insert(projects).values({
+    id: projectId,
+    title,
+    rawInput: '',
+    status: 'confirmed',
+    weekOf,
+    createdAt: now,
+    deadline: deadline ?? null,
+    projectPriority: projectPriority ?? 3,
+  }).run();
+
+  const taskIds: string[] = [];
+  for (let i = 0; i < inputTasks.length; i++) {
+    const taskId = randomUUID();
+    taskIds.push(taskId);
+    db.insert(tasks).values({
+      id: taskId,
+      projectId,
+      title: inputTasks[i].title,
+      estimatedMinutes: inputTasks[i].estimatedMinutes,
+      status: 'confirmed',
+      order: i,
+      dependsOnTaskId: i > 0 && inputTasks.length > 1 ? taskIds[i - 1] : null,
+    }).run();
+  }
+
+  const created = db.select().from(projects).where(eq(projects.id, projectId)).get();
+  const createdTasks = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all().map(deserializeTask);
+  res.json({ ...created, tasks: createdTasks });
+});
+
+// POST /api/projects/quick-task — create a single-task project instantly
+router.post('/quick-task', (req, res) => {
+  const { title, estimatedMinutes } = req.body as { title: string; estimatedMinutes: number };
+
+  if (!title || !estimatedMinutes) {
+    res.status(400).json({ error: 'title and estimatedMinutes are required' });
+    return;
+  }
+
+  const projectId = randomUUID();
+  const taskId = randomUUID();
+  const now = Date.now();
+  const weekOf = new Date().toISOString().slice(0, 10);
+
+  db.insert(projects).values({
+    id: projectId,
+    title,
+    rawInput: '',
+    status: 'confirmed',
+    weekOf,
+    createdAt: now,
+  }).run();
+
+  db.insert(tasks).values({
+    id: taskId,
+    projectId,
+    title,
+    estimatedMinutes,
+    status: 'confirmed',
+    order: 0,
+  }).run();
+
+  const created = db.select().from(projects).where(eq(projects.id, projectId)).get();
+  const createdTasks = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all().map(deserializeTask);
+  res.json({ ...created, tasks: createdTasks });
 });
 
 export default router;

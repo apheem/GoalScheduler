@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, rejectProject, scheduleTasks, updateTask, unscheduleProject } from '../api/client';
+import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, rejectProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask } from '../api/client';
 import TaskEditModal from '../components/TaskEditModal';
 import Layout from '../components/Layout';
 import PeopleManager from '../components/PeopleManager';
@@ -20,11 +20,36 @@ const PRIORITY_COLOR: Record<string, string> = {
   low:    'text-slate-400',
 };
 
+const PROJECT_PRIORITY: Record<number, { label: string; color: string; short: string }> = {
+  1: { label: 'Critical',    color: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400', short: 'P1' },
+  2: { label: 'High',        color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400', short: 'P2' },
+  3: { label: 'Medium',      color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400', short: 'P3' },
+  4: { label: 'Low',         color: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400', short: 'P4' },
+  5: { label: 'Backlog',     color: 'bg-slate-50 dark:bg-gray-800/50 text-slate-400 dark:text-gray-500', short: 'P5' },
+};
+
 export default function InputPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showInput, setShowInput] = useState(false);
   const [rawInput, setRawInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'ai' | 'quick' | 'manual'>('ai');
+
+  // Quick Task state
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickMins, setQuickMins] = useState(30);
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+
+  // Manual Project state
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualDeadline, setManualDeadline] = useState('');
+  const [manualPriority, setManualPriority] = useState(3);
+  const [manualSteps, setManualSteps] = useState<Array<{ title: string; estimatedMinutes: number }>>([]);
+  const [manualStepTitle, setManualStepTitle] = useState('');
+  const [manualStepMins, setManualStepMins] = useState(30);
+  const [manualLoading, setManualLoading] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
 
   // Load all persisted projects from DB
   const { data: allProjects = [], refetch: refetchProjects } = useQuery<Project[]>({
@@ -119,7 +144,7 @@ export default function InputPage() {
                   {hasProjects ? 'Add new goals' : 'What do you need to get done?'}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-                  Describe your goals, projects, and tasks — as messy as you want.
+                  Use AI, add a quick task, or build a project manually.
                 </p>
               </div>
               {hasProjects && (
@@ -132,58 +157,298 @@ export default function InputPage() {
               )}
             </div>
 
-            <div className="px-5">
-              <textarea
-                autoFocus
-                className="w-full h-44 p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all leading-relaxed"
-                placeholder="This week I need to finish the user auth — login, logout, and password reset. Also prep slides for Thursday's client meeting, roughly 20 slides…"
-                value={rawInput}
-                onChange={(e) => setRawInput(e.target.value)}
-              />
+            {/* Tabs */}
+            <div className="flex px-5 gap-1">
+              {([
+                { key: 'ai' as const, label: 'AI Breakdown' },
+                { key: 'quick' as const, label: 'Quick Task' },
+                { key: 'manual' as const, label: 'Manual Project' },
+              ]).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                    activeTab === tab.key
+                      ? 'bg-slate-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-b-0 border-slate-200 dark:border-gray-700'
+                      : 'text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            {parseMutation.isError && (
-              <div className="mx-5 mt-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl space-y-2">
-                <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-                  ⚠️ {(parseMutation.error as Error).message}
-                </p>
-                {(parseMutation.error as Error).message.includes('server') && (
-                  <div className="bg-red-100 dark:bg-red-900/40 rounded-lg px-3 py-2">
-                    <p className="text-xs text-red-600 dark:text-red-300 font-medium mb-1">How to start the server:</p>
-                    <ol className="text-xs text-red-600 dark:text-red-300 space-y-1 list-decimal list-inside">
-                      <li>Double-click <code className="bg-red-200 dark:bg-red-900 px-1 rounded">Start GoalScheduler.bat</code> on your desktop</li>
-                      <li>Wait ~5 seconds for the server to start, then try again</li>
-                    </ol>
+            {/* AI Breakdown Tab */}
+            {activeTab === 'ai' && (
+              <>
+                <div className="px-5 pt-4">
+                  <textarea
+                    autoFocus
+                    className="w-full h-44 p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all leading-relaxed"
+                    placeholder="This week I need to finish the user auth — login, logout, and password reset. Also prep slides for Thursday's client meeting, roughly 20 slides…"
+                    value={rawInput}
+                    onChange={(e) => setRawInput(e.target.value)}
+                  />
+                </div>
+
+                {parseMutation.isError && (
+                  <div className="mx-5 mt-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl space-y-2">
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                      {(parseMutation.error as Error).message}
+                    </p>
+                    {(parseMutation.error as Error).message.includes('server') && (
+                      <div className="bg-red-100 dark:bg-red-900/40 rounded-lg px-3 py-2">
+                        <p className="text-xs text-red-600 dark:text-red-300 font-medium mb-1">How to start the server:</p>
+                        <ol className="text-xs text-red-600 dark:text-red-300 space-y-1 list-decimal list-inside">
+                          <li>Double-click <code className="bg-red-200 dark:bg-red-900 px-1 rounded">Start GoalScheduler.bat</code> on your desktop</li>
+                          <li>Wait ~5 seconds for the server to start, then try again</li>
+                        </ol>
+                      </div>
+                    )}
                   </div>
                 )}
+
+                <div className="px-5 py-5">
+                  <button
+                    type="button"
+                    disabled={!rawInput.trim() || parseMutation.isPending}
+                    onClick={() => parseMutation.mutate()}
+                    className="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
+                  >
+                    {parseMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Claude is organizing your tasks…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Break it down</span>
+                        <span>→</span>
+                      </>
+                    )}
+                  </button>
+                  {!rawInput.trim() && (
+                    <p className="text-center text-xs text-slate-400 dark:text-gray-500 mt-2">
+                      Type something above to get started
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Quick Task Tab */}
+            {activeTab === 'quick' && (
+              <div className="px-5 pt-4 pb-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Task name</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="e.g. Reply to client email"
+                    className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    value={quickTitle}
+                    onChange={(e) => setQuickTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Estimated minutes</label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={480}
+                    step={5}
+                    className="w-32 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    value={quickMins}
+                    onChange={(e) => setQuickMins(+e.target.value)}
+                  />
+                </div>
+
+                {quickError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                    <p className="text-sm text-red-700 dark:text-red-400">{quickError}</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  disabled={!quickTitle.trim() || quickLoading}
+                  onClick={async () => {
+                    setQuickLoading(true);
+                    setQuickError(null);
+                    try {
+                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins });
+                      setQuickTitle('');
+                      setQuickMins(30);
+                      setShowInput(false);
+                      refetchProjects();
+                    } catch (err) {
+                      setQuickError((err as Error).message);
+                    } finally {
+                      setQuickLoading(false);
+                    }
+                  }}
+                  className="w-full py-3.5 px-6 bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-green-300 dark:disabled:bg-green-800 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
+                >
+                  {quickLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span>Add to Schedule</span>
+                  )}
+                </button>
               </div>
             )}
 
-            <div className="px-5 py-5">
-              <button
-                type="button"
-                disabled={!rawInput.trim() || parseMutation.isPending}
-                onClick={() => parseMutation.mutate()}
-                className="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
-              >
-                {parseMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Claude is organizing your tasks…</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Break it down</span>
-                    <span>→</span>
-                  </>
+            {/* Manual Project Tab */}
+            {activeTab === 'manual' && (
+              <div className="px-5 pt-4 pb-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Project title</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="e.g. Website Redesign"
+                    className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    value={manualTitle}
+                    onChange={(e) => setManualTitle(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Deadline (optional)</label>
+                    <input
+                      type="date"
+                      className="w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      value={manualDeadline}
+                      onChange={(e) => setManualDeadline(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Priority</label>
+                    <select
+                      value={manualPriority}
+                      onChange={(e) => setManualPriority(+e.target.value)}
+                      className="w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    >
+                      {[1,2,3,4,5].map((n) => (
+                        <option key={n} value={n}>{PROJECT_PRIORITY[n].short} — {PROJECT_PRIORITY[n].label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Steps list */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">
+                    Steps ({manualSteps.length})
+                  </label>
+                  {manualSteps.length > 0 && (
+                    <div className="space-y-1.5 mb-3">
+                      {manualSteps.map((step, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700"
+                        >
+                          <span className="text-xs text-slate-400 dark:text-gray-500 font-mono w-4 text-right flex-shrink-0">{i + 1}.</span>
+                          <span className="flex-1 text-sm text-slate-800 dark:text-gray-200 truncate">{step.title}</span>
+                          <span className="text-xs text-slate-400 dark:text-gray-500 flex-shrink-0">{step.estimatedMinutes} min</span>
+                          <button
+                            onClick={() => setManualSteps((s) => s.filter((_, j) => j !== i))}
+                            className="text-xs text-slate-300 dark:text-gray-600 hover:text-red-400 p-0.5 flex-shrink-0"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add step form */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Step name…"
+                      className="flex-1 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      value={manualStepTitle}
+                      onChange={(e) => setManualStepTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && manualStepTitle.trim()) {
+                          setManualSteps((s) => [...s, { title: manualStepTitle.trim(), estimatedMinutes: manualStepMins }]);
+                          setManualStepTitle('');
+                          setManualStepMins(30);
+                        }
+                      }}
+                    />
+                    <input
+                      type="number"
+                      min={5}
+                      max={480}
+                      step={5}
+                      className="w-20 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      value={manualStepMins}
+                      onChange={(e) => setManualStepMins(+e.target.value)}
+                    />
+                    <span className="text-xs text-slate-400 dark:text-gray-500">min</span>
+                    <button
+                      onClick={() => {
+                        if (manualStepTitle.trim()) {
+                          setManualSteps((s) => [...s, { title: manualStepTitle.trim(), estimatedMinutes: manualStepMins }]);
+                          setManualStepTitle('');
+                          setManualStepMins(30);
+                        }
+                      }}
+                      disabled={!manualStepTitle.trim()}
+                      className="text-xs px-3 py-2 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 disabled:opacity-40 text-slate-600 dark:text-gray-300 rounded-lg font-medium transition-colors border border-slate-200 dark:border-gray-700"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                {manualError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                    <p className="text-sm text-red-700 dark:text-red-400">{manualError}</p>
+                  </div>
                 )}
-              </button>
-              {!rawInput.trim() && (
-                <p className="text-center text-xs text-slate-400 dark:text-gray-500 mt-2">
-                  Type something above to get started
-                </p>
-              )}
-            </div>
+
+                <button
+                  type="button"
+                  disabled={!manualTitle.trim() || manualSteps.length === 0 || manualLoading}
+                  onClick={async () => {
+                    setManualLoading(true);
+                    setManualError(null);
+                    try {
+                      await createManualProject({
+                        title: manualTitle.trim(),
+                        deadline: manualDeadline || null,
+                        projectPriority: manualPriority,
+                        tasks: manualSteps,
+                      });
+                      setManualTitle('');
+                      setManualDeadline('');
+                      setManualSteps([]);
+                      setShowInput(false);
+                      refetchProjects();
+                    } catch (err) {
+                      setManualError((err as Error).message);
+                    } finally {
+                      setManualLoading(false);
+                    }
+                  }}
+                  className="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
+                >
+                  {manualLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span>Create Project</span>
+                  )}
+                </button>
+                {manualSteps.length === 0 && (
+                  <p className="text-center text-xs text-slate-400 dark:text-gray-500">
+                    Add at least one step to create the project
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -316,6 +581,22 @@ function ProjectDashboardCard({
               </p>
             </div>
           </button>
+
+          {/* Priority selector */}
+          <select
+            value={project.projectPriority ?? 3}
+            onChange={(e) => {
+              const val = +e.target.value;
+              updateProject(project.id, { projectPriority: val });
+              onRefresh();
+            }}
+            className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 border-0 cursor-pointer appearance-none text-center ${PROJECT_PRIORITY[project.projectPriority ?? 3]?.color ?? PROJECT_PRIORITY[3].color}`}
+            title="Project priority (1=Critical, 5=Backlog)"
+          >
+            {[1,2,3,4,5].map((n) => (
+              <option key={n} value={n}>{PROJECT_PRIORITY[n].short} — {PROJECT_PRIORITY[n].label}</option>
+            ))}
+          </select>
 
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.color}`}>
             {badge.label}

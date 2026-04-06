@@ -151,6 +151,7 @@ router.post('/', async (req, res) => {
           allowedEndHour: effectiveEndHour,
           assigneeKeys: taskAssigneeIds.length ? taskAssigneeIds : undefined,
           maxMinutesPerDay: effectiveMaxPerDay,
+          projectPriority: proj?.projectPriority ?? 3,
         };
       }),
       existingEvents,
