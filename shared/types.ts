@@ -56,6 +56,7 @@ export interface Project {
   allowedDays: number[] | null;  // override global workDays for this project
   allowedStartHour: number | null;
   allowedEndHour: number | null;
+  ownerId: string | null;
   tasks: Task[];
 }
 

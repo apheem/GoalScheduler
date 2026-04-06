@@ -34,7 +34,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Parse ────────────────────────────────────────────────────────────────
 
-export function parseGoals(payload: ParseRequest): Promise<{ projects: Project[] }> {
+export function parseGoals(payload: ParseRequest & { ownerId?: string | null }): Promise<{ projects: Project[] }> {
   return request('/parse', { method: 'POST', body: JSON.stringify(payload) });
 }
 
@@ -107,6 +107,7 @@ export function createManualProject(payload: {
   title: string;
   deadline?: string | null;
   projectPriority?: number;
+  ownerId?: string | null;
   tasks: Array<{ title: string; estimatedMinutes: number }>;
 }): Promise<Project> {
   return request('/projects/manual', { method: 'POST', body: JSON.stringify(payload) });
@@ -115,6 +116,7 @@ export function createManualProject(payload: {
 export function createQuickTask(payload: {
   title: string;
   estimatedMinutes: number;
+  ownerId?: string | null;
 }): Promise<Project> {
   return request('/projects/quick-task', { method: 'POST', body: JSON.stringify(payload) });
 }

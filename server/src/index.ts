@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { initDb } from './db';
 import parseRouter from './routes/parse';
 import tasksRouter from './routes/tasks';
@@ -11,10 +13,19 @@ import peopleRouter from './routes/people';
 import { startReschedulerCron } from './jobs/endOfDayRescheduler';
 
 const app = express();
-const PORT = process.env.PORT ?? 3001;
+const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
-app.use(cors({ origin: /^http:\/\/localhost(:\d+)?$/ }));
+const clientDist = path.resolve(__dirname, '../../client/dist');
+const isProduction = fs.existsSync(clientDist);
+
+if (isProduction) {
+  // In production the client is served from the same origin — no CORS needed
+  app.use(cors());
+} else {
+  // In dev, allow localhost origins for the Vite dev server
+  app.use(cors({ origin: /^http:\/\/localhost(:\d+)?$/ }));
+}
 app.use(express.json());
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
@@ -39,6 +50,16 @@ app.post('/api/dev/clear-max-block', async (req, res) => {
   db.update(tasks).set({ maxBlockMinutes: null }).run();
   res.json({ ok: true, message: 'Cleared maxBlockMinutes on all tasks' });
 });
+
+// ─── Static file serving (production) ────────────────────────────────────────
+if (isProduction) {
+  app.use(express.static(clientDist));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(clientDist, 'index.html'));
+    }
+  });
+}
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 initDb();

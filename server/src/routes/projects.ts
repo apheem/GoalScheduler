@@ -33,13 +33,14 @@ router.get('/', (req, res) => {
 // PATCH /api/projects/:id — update project settings
 router.patch('/:id', (req, res) => {
   const { id } = req.params;
-  const { deadline, allowedDays, allowedStartHour, allowedEndHour, projectPriority } = req.body;
+  const { deadline, allowedDays, allowedStartHour, allowedEndHour, projectPriority, ownerId } = req.body;
   const update: Record<string, unknown> = {};
   if ('deadline' in req.body) update.deadline = deadline ?? null;
   if ('allowedDays' in req.body) update.allowedDays = allowedDays ? JSON.stringify(allowedDays) : null;
   if ('allowedStartHour' in req.body) update.allowedStartHour = allowedStartHour ?? null;
   if ('allowedEndHour' in req.body) update.allowedEndHour = allowedEndHour ?? null;
   if ('projectPriority' in req.body) update.projectPriority = projectPriority ?? 3;
+  if ('ownerId' in req.body) update.ownerId = ownerId ?? null;
   if (Object.keys(update).length) {
     db.update(projects).set(update as any).where(eq(projects.id, id)).run();
   }
@@ -87,10 +88,11 @@ router.delete('/:id', (req, res) => {
 
 // POST /api/projects/manual — create a project with user-defined steps (skip AI)
 router.post('/manual', (req, res) => {
-  const { title, deadline, projectPriority, tasks: inputTasks } = req.body as {
+  const { title, deadline, projectPriority, ownerId, tasks: inputTasks } = req.body as {
     title: string;
     deadline?: string | null;
     projectPriority?: number;
+    ownerId?: string | null;
     tasks: Array<{ title: string; estimatedMinutes: number }>;
   };
 
@@ -112,6 +114,7 @@ router.post('/manual', (req, res) => {
     createdAt: now,
     deadline: deadline ?? null,
     projectPriority: projectPriority ?? 3,
+    ownerId: ownerId ?? null,
   }).run();
 
   const taskIds: string[] = [];
@@ -136,7 +139,7 @@ router.post('/manual', (req, res) => {
 
 // POST /api/projects/quick-task — create a single-task project instantly
 router.post('/quick-task', (req, res) => {
-  const { title, estimatedMinutes } = req.body as { title: string; estimatedMinutes: number };
+  const { title, estimatedMinutes, ownerId } = req.body as { title: string; estimatedMinutes: number; ownerId?: string | null };
 
   if (!title || !estimatedMinutes) {
     res.status(400).json({ error: 'title and estimatedMinutes are required' });
@@ -155,6 +158,7 @@ router.post('/quick-task', (req, res) => {
     status: 'confirmed',
     weekOf,
     createdAt: now,
+    ownerId: ownerId ?? null,
   }).run();
 
   db.insert(tasks).values({

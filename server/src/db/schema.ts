@@ -12,6 +12,7 @@ export const projects = sqliteTable('projects', {
   allowedDays: text('allowed_days'),       // JSON array or null
   allowedStartHour: integer('allowed_start_hour'),
   allowedEndHour: integer('allowed_end_hour'),
+  ownerId: text('owner_id'),
 });
 
 export const tasks = sqliteTable('tasks', {

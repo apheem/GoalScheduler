@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
@@ -11,6 +12,7 @@ type BlockEntry = { task: ScheduledTask; block: TaskBlock | null };
 export default function SchedulePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [filterPerson, setFilterPerson] = useState<string | null>(null);
 
   const { data: tasks = [], isLoading } = useQuery<ScheduledTask[]>({
     queryKey: ['scheduled-tasks'],
@@ -45,8 +47,13 @@ export default function SchedulePage() {
 
   const anyCalendarConnected = connections.length > 0;
 
+  // Filter tasks by selected person's assigneeIds
+  const filteredTasks = filterPerson
+    ? tasks.filter((t) => (t.assigneeIds ?? []).includes(filterPerson))
+    : tasks;
+
   // Group by day — explode multi-block tasks into individual block entries
-  const byDay = tasks.reduce<Record<string, BlockEntry[]>>((acc, task) => {
+  const byDay = filteredTasks.reduce<Record<string, BlockEntry[]>>((acc, task) => {
     if (task.blocks && task.blocks.length > 0) {
       for (const block of task.blocks) {
         const day = format(parseISO(block.scheduledStart), 'yyyy-MM-dd');
@@ -62,9 +69,9 @@ export default function SchedulePage() {
   }, {});
 
   const sortedDays = Object.keys(byDay).sort();
-  const needsAttention = tasks.filter((t) => t.status === 'needs_attention');
-  const completedCount = tasks.filter((t) => t.status === 'complete').length;
-  const scheduledCount = tasks.filter((t) => t.status === 'scheduled' || t.status === 'rescheduled').length;
+  const needsAttention = filteredTasks.filter((t) => t.status === 'needs_attention');
+  const completedCount = filteredTasks.filter((t) => t.status === 'complete').length;
+  const scheduledCount = filteredTasks.filter((t) => t.status === 'scheduled' || t.status === 'rescheduled').length;
 
   function dayLabel(dateStr: string) {
     const d = parseISO(dateStr);
@@ -94,6 +101,39 @@ export default function SchedulePage() {
             + New goals
           </button>
         </div>
+
+        {/* Person filter pills */}
+        {people.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setFilterPerson(null)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                filterPerson === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              All
+            </button>
+            {people.map((person) => (
+              <button
+                key={person.id}
+                onClick={() => setFilterPerson(filterPerson === person.id ? null : person.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                  filterPerson === person.id
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: person.color }}
+                />
+                {person.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Calendar connection banner */}
         {!anyCalendarConnected && authStatus?.configured && (
@@ -133,7 +173,7 @@ export default function SchedulePage() {
         )}
 
         {/* Instruction card */}
-        {tasks.length > 0 && anyCalendarConnected && (
+        {filteredTasks.length > 0 && anyCalendarConnected && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-4">
             <div className="flex gap-3">
               <span className="text-lg flex-shrink-0">📅</span>
@@ -157,7 +197,7 @@ export default function SchedulePage() {
         )}
 
         {/* Stats */}
-        {tasks.length > 0 && (
+        {filteredTasks.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'Scheduled', value: scheduledCount, color: 'text-indigo-600 dark:text-indigo-400' },

@@ -9,7 +9,8 @@ import { formatISO, startOfWeek } from 'date-fns';
 const router = Router();
 
 router.post('/', async (req, res) => {
-  const { rawInput, workingHours }: ParseRequest = req.body;
+  const { rawInput, workingHours } = req.body as ParseRequest & { ownerId?: string | null };
+  const ownerId = req.body.ownerId ?? null;
 
   if (!rawInput?.trim()) {
     return res.status(400).json({ error: 'rawInput is required' });
@@ -45,6 +46,7 @@ router.post('/', async (req, res) => {
         weekOf,
         createdAt: Date.now(),
         projectPriority: 3,
+        ownerId,
       }).run();
 
       const createdTasks = [];

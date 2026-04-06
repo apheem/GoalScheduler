@@ -35,6 +35,9 @@ export default function InputPage() {
   const [rawInput, setRawInput] = useState('');
   const [activeTab, setActiveTab] = useState<'ai' | 'quick' | 'manual'>('ai');
 
+  // Person filter
+  const [filterPerson, setFilterPerson] = useState<string | null>(null);
+
   // Quick Task state
   const [quickTitle, setQuickTitle] = useState('');
   const [quickMins, setQuickMins] = useState(30);
@@ -62,8 +65,14 @@ export default function InputPage() {
     queryFn: () => fetch('/api/people').then((r) => r.json()),
   });
 
-  const activeProjects = allProjects.filter((p) => p.status !== 'rejected');
-  const hasProjects = activeProjects.length > 0;
+  const allActiveProjects = allProjects.filter((p) => p.status !== 'rejected');
+  const activeProjects = filterPerson
+    ? allActiveProjects.filter((p) =>
+        p.ownerId === filterPerson ||
+        p.tasks.some((t) => (t.assigneeIds ?? []).includes(filterPerson))
+      )
+    : allActiveProjects;
+  const hasProjects = allActiveProjects.length > 0;
   const confirmedProjectIds = activeProjects
     .filter((p) => p.status === 'confirmed' || p.tasks.some((t) => t.status === 'scheduled' || t.status === 'rescheduled'))
     .map((p) => p.id);
@@ -75,7 +84,7 @@ export default function InputPage() {
     mutationFn: () => parseGoals({ rawInput, workingHours: {
       startHour: 9, endHour: 18, workDays: [1,2,3,4,5],
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    }}),
+    }, ...(filterPerson ? { ownerId: filterPerson } : {}) }),
     onSuccess: (data) => {
       queryClient.setQueryData(['projects', 'parsed'], data.projects);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -97,20 +106,54 @@ export default function InputPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Your projects</h2>
-              <div className="flex items-center gap-3">
-                {confirmedProjectIds.length > 0 && (
-                  <ScheduleAllButton
-                    projectIds={confirmedProjectIds}
-                    onDone={() => { queryClient.invalidateQueries({ queryKey: ['projects'] }); navigate('/schedule'); }}
-                  />
-                )}
+            </div>
+
+            {/* Person filter pills */}
+            {people.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => navigate('/schedule')}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                  onClick={() => setFilterPerson(null)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                    filterPerson === null
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-700'
+                  }`}
                 >
-                  View schedule →
+                  All
                 </button>
+                {people.map((person) => (
+                  <button
+                    key={person.id}
+                    onClick={() => setFilterPerson(filterPerson === person.id ? null : person.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                      filterPerson === person.id
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: person.color }}
+                    />
+                    {person.name}
+                  </button>
+                ))}
               </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              {confirmedProjectIds.length > 0 && (
+                <ScheduleAllButton
+                  projectIds={confirmedProjectIds}
+                  onDone={() => { queryClient.invalidateQueries({ queryKey: ['projects'] }); navigate('/schedule'); }}
+                />
+              )}
+              <button
+                onClick={() => navigate('/schedule')}
+                className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+              >
+                View schedule →
+              </button>
             </div>
 
             {activeProjects.map((project) => (
@@ -276,7 +319,7 @@ export default function InputPage() {
                     setQuickLoading(true);
                     setQuickError(null);
                     try {
-                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins });
+                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(filterPerson ? { ownerId: filterPerson } : {}) });
                       setQuickTitle('');
                       setQuickMins(30);
                       setShowInput(false);
@@ -422,6 +465,7 @@ export default function InputPage() {
                         deadline: manualDeadline || null,
                         projectPriority: manualPriority,
                         tasks: manualSteps,
+                        ...(filterPerson ? { ownerId: filterPerson } : {}),
                       });
                       setManualTitle('');
                       setManualDeadline('');
