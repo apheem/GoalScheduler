@@ -4,7 +4,11 @@ import path from 'path';
 import fs from 'fs';
 import * as schema from './schema';
 
-const DB_PATH = path.join(__dirname, '../../data/app.db');
+// In production, use an absolute path for the Railway persistent volume
+// In dev, use relative path from project root
+const DB_PATH = process.env.NODE_ENV === 'production'
+  ? '/app/server/data/app.db'
+  : path.join(__dirname, '../../data/app.db');
 
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) {
