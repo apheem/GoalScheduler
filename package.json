@@ -10,6 +10,9 @@
     "build": "npm run build --workspace=client && npm run build --workspace=server",
     "start": "node server/dist/index.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "concurrently": "^9.1.2"
   }
