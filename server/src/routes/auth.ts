@@ -25,10 +25,19 @@ router.get('/connections', async (req, res) => {
   res.json(connected);
 });
 
+// Determine the frontend origin for post-OAuth redirects
+function getAppOrigin(req: import('express').Request): string {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, client is served from the same origin
+    return `${req.protocol}://${req.get('host')}`;
+  }
+  return 'http://localhost:5173';
+}
+
 // GET /api/auth/google?personId=xxx — redirect to Google consent screen
 router.get('/google', (req, res) => {
   if (!isConfigured()) {
-    return res.redirect('http://localhost:5173/setup?error=missing_credentials');
+    return res.redirect(`${getAppOrigin(req)}/setup?error=missing_credentials`);
   }
   const personId = (req.query.personId as string) || MAIN_CALENDAR;
   res.redirect(getAuthUrl(personId));
@@ -38,17 +47,18 @@ router.get('/google', (req, res) => {
 router.get('/google/callback', async (req, res) => {
   const code = req.query.code as string;
   const personId = (req.query.state as string) || MAIN_CALENDAR;
+  const origin = getAppOrigin(req);
 
   if (!code) {
-    return res.redirect('http://localhost:5173/setup?error=no_code');
+    return res.redirect(`${origin}/setup?error=no_code`);
   }
   try {
     await exchangeCode(code, personId);
     const extra = personId !== MAIN_CALENDAR ? `&personId=${encodeURIComponent(personId)}` : '';
-    res.redirect(`http://localhost:5173/setup?connected=true${extra}`);
+    res.redirect(`${origin}/setup?connected=true${extra}`);
   } catch (err) {
     console.error('[auth] OAuth error:', err);
-    res.redirect('http://localhost:5173/setup?error=oauth_failed');
+    res.redirect(`${origin}/setup?error=oauth_failed`);
   }
 });
 

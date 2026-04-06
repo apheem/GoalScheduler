@@ -6,10 +6,11 @@ import { eq } from 'drizzle-orm';
 export const MAIN_CALENDAR = '__main__';
 
 export function createOAuth2Client() {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback';
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:3001/api/auth/google/callback'
+    redirectUri
   );
 }
 
