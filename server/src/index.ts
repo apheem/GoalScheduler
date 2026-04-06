@@ -16,7 +16,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
-const clientDist = path.resolve(__dirname, '../../client/dist');
+// In compiled output, __dirname = server/dist/server/src/
+// So we go up 4 levels to reach the project root, then into client/dist
+const clientDist = path.resolve(__dirname, '../../../../client/dist');
 const isProduction = fs.existsSync(clientDist);
 
 if (isProduction) {
