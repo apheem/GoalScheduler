@@ -68,7 +68,7 @@ export default function SetupPage() {
     queryFn: getAuthStatus,
   });
 
-  const { data: connections = [], refetch: refetchConnections } = useQuery<string[]>({
+  const { data: connections = [], refetch: _refetchConnections } = useQuery<string[]>({
     queryKey: ['auth-connections'],
     queryFn: getConnections,
   });

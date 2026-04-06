@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, rejectProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask } from '../api/client';
+import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask } from '../api/client';
 import TaskEditModal from '../components/TaskEditModal';
 import Layout from '../components/Layout';
 import PeopleManager from '../components/PeopleManager';
@@ -515,7 +515,7 @@ export default function InputPage() {
 function ProjectDashboardCard({
   project,
   people,
-  allConfirmedProjectIds,
+  allConfirmedProjectIds: _allConfirmedProjectIds,
   onRefresh,
 }: {
   project: Project;
@@ -523,6 +523,7 @@ function ProjectDashboardCard({
   allConfirmedProjectIds: string[];
   onRefresh: () => void;
 }) {
+  void _allConfirmedProjectIds;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(project.status === 'pending');
@@ -536,10 +537,11 @@ function ProjectDashboardCard({
 
   const badge = STATUS_BADGE[project.status] ?? STATUS_BADGE.pending;
 
-  const confirmMutation = useMutation({
+  const _confirmMutation = useMutation({
     mutationFn: () => confirmProject(project.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   });
+  void _confirmMutation;
 
   const deleteProjMutation = useMutation({
     mutationFn: () => deleteProject(project.id),
