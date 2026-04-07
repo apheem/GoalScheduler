@@ -38,9 +38,13 @@ export default function InputPage() {
   // Person filter
   const [filterPerson, setFilterPerson] = useState<string | null>(null);
 
+  // AI Breakdown state
+  const [aiStartDate, setAiStartDate] = useState('');
+
   // Quick Task state
   const [quickTitle, setQuickTitle] = useState('');
   const [quickMins, setQuickMins] = useState(30);
+  const [quickStartDate, setQuickStartDate] = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
 
@@ -85,11 +89,12 @@ export default function InputPage() {
     mutationFn: () => parseGoals({ rawInput, workingHours: {
       startHour: 9, endHour: 18, workDays: [1,2,3,4,5],
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    }, ...(filterPerson ? { ownerId: filterPerson } : {}) }),
+    }, ...(filterPerson ? { ownerId: filterPerson } : {}), ...(aiStartDate ? { startDate: aiStartDate } : {}) }),
     onSuccess: (data) => {
       queryClient.setQueryData(['projects', 'parsed'], data.projects);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setRawInput('');
+      setAiStartDate('');
       setShowInput(false);
       refetchProjects();
     },
@@ -252,6 +257,16 @@ export default function InputPage() {
                   </div>
                 )}
 
+                <div className="px-5 pt-2">
+                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Start date (optional)</label>
+                  <input
+                    type="date"
+                    className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    value={aiStartDate}
+                    onChange={(e) => setAiStartDate(e.target.value)}
+                  />
+                </div>
+
                 <div className="px-5 py-5">
                   <button
                     type="button"
@@ -294,17 +309,28 @@ export default function InputPage() {
                     onChange={(e) => setQuickTitle(e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Estimated minutes</label>
-                  <input
-                    type="number"
-                    min={5}
-                    max={480}
-                    step={5}
-                    className="w-32 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    value={quickMins}
-                    onChange={(e) => setQuickMins(+e.target.value)}
-                  />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Estimated minutes</label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={480}
+                      step={5}
+                      className="w-full sm:w-32 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      value={quickMins}
+                      onChange={(e) => setQuickMins(+e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Start date (optional)</label>
+                    <input
+                      type="date"
+                      className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      value={quickStartDate}
+                      onChange={(e) => setQuickStartDate(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 {quickError && (
@@ -320,9 +346,10 @@ export default function InputPage() {
                     setQuickLoading(true);
                     setQuickError(null);
                     try {
-                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(filterPerson ? { ownerId: filterPerson } : {}) });
+                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(filterPerson ? { ownerId: filterPerson } : {}), ...(quickStartDate ? { startDate: quickStartDate } : {}) });
                       setQuickTitle('');
                       setQuickMins(30);
+                      setQuickStartDate('');
                       setShowInput(false);
                       refetchProjects();
                     } catch (err) {
