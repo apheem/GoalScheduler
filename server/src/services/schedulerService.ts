@@ -27,6 +27,7 @@ export interface TaskToSchedule {
   maxBlockMinutes: number | null;  // null = no splitting; when set, caps per-day minutes for this task
   priority: Priority;
   deadline: string | null;         // ISO date
+  startDate?: string | null;      // ISO date — earliest scheduling date
   dependsOnTaskId: string | null;
   order: number;
   allowedDays?: number[] | null;
@@ -202,6 +203,15 @@ export function scheduleTasks(
       task.allowedEndHour
     );
     let freeSlots = subtractEvents(windows, existingEvents);
+
+    // Enforce startDate: tasks must not start before the start date
+    if (task.startDate) {
+      const startCutoff = parseISO(task.startDate);
+      freeSlots = freeSlots.filter((s) => !isBefore(s.end, startCutoff));
+      freeSlots = freeSlots.map((s) =>
+        isBefore(s.start, startCutoff) ? { ...s, start: startCutoff } : s
+      ).filter((s) => s.end.getTime() - s.start.getTime() >= 10 * 60 * 1000);
+    }
 
     // Enforce deadline: tasks must finish by end of deadline day
     if (task.deadline) {

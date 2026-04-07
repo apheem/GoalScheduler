@@ -144,6 +144,7 @@ router.post('/', async (req, res) => {
           maxBlockMinutes: t.maxBlockMinutes ?? null,
           priority: (t.priority as Priority) ?? 'medium',
           deadline: proj?.deadline ?? null,
+          startDate: proj?.startDate ?? null,
           dependsOnTaskId: t.dependsOnTaskId,
           order: t.order,
           allowedDays: effectiveDays,

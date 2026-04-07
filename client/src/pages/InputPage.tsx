@@ -47,6 +47,7 @@ export default function InputPage() {
   // Manual Project state
   const [manualTitle, setManualTitle] = useState('');
   const [manualDeadline, setManualDeadline] = useState('');
+  const [manualStartDate, setManualStartDate] = useState('');
   const [manualPriority, setManualPriority] = useState(3);
   const [manualSteps, setManualSteps] = useState<Array<{ title: string; estimatedMinutes: number }>>([]);
   const [manualStepTitle, setManualStepTitle] = useState('');
@@ -201,7 +202,7 @@ export default function InputPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex px-5 gap-1">
+            <div className="flex flex-wrap px-5 gap-1">
               {([
                 { key: 'ai' as const, label: 'AI Breakdown' },
                 { key: 'quick' as const, label: 'Quick Task' },
@@ -355,22 +356,33 @@ export default function InputPage() {
                     onChange={(e) => setManualTitle(e.target.value)}
                   />
                 </div>
-                <div className="flex gap-4">
-                  <div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Start date (optional)</label>
+                    <input
+                      type="date"
+                      className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      value={manualStartDate}
+                      onChange={(e) => setManualStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1">
                     <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Deadline (optional)</label>
                     <input
                       type="date"
-                      className="w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                       value={manualDeadline}
                       onChange={(e) => setManualDeadline(e.target.value)}
                     />
                   </div>
-                  <div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
                     <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Priority</label>
                     <select
                       value={manualPriority}
                       onChange={(e) => setManualPriority(+e.target.value)}
-                      className="w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     >
                       {[1,2,3,4,5].map((n) => (
                         <option key={n} value={n}>{PROJECT_PRIORITY[n].short} — {PROJECT_PRIORITY[n].label}</option>
@@ -406,11 +418,11 @@ export default function InputPage() {
                   )}
 
                   {/* Add step form */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       placeholder="Step name…"
-                      className="flex-1 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="flex-1 min-w-0 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       value={manualStepTitle}
                       onChange={(e) => setManualStepTitle(e.target.value)}
                       onKeyDown={(e) => {
@@ -421,29 +433,31 @@ export default function InputPage() {
                         }
                       }}
                     />
-                    <input
-                      type="number"
-                      min={5}
-                      max={480}
-                      step={5}
-                      className="w-20 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      value={manualStepMins}
-                      onChange={(e) => setManualStepMins(+e.target.value)}
-                    />
-                    <span className="text-xs text-slate-400 dark:text-gray-500">min</span>
-                    <button
-                      onClick={() => {
-                        if (manualStepTitle.trim()) {
-                          setManualSteps((s) => [...s, { title: manualStepTitle.trim(), estimatedMinutes: manualStepMins }]);
-                          setManualStepTitle('');
-                          setManualStepMins(30);
-                        }
-                      }}
-                      disabled={!manualStepTitle.trim()}
-                      className="text-xs px-3 py-2 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 disabled:opacity-40 text-slate-600 dark:text-gray-300 rounded-lg font-medium transition-colors border border-slate-200 dark:border-gray-700"
-                    >
-                      + Add
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={5}
+                        max={480}
+                        step={5}
+                        className="w-20 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-2 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white text-center focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        value={manualStepMins}
+                        onChange={(e) => setManualStepMins(+e.target.value)}
+                      />
+                      <span className="text-xs text-slate-400 dark:text-gray-500">min</span>
+                      <button
+                        onClick={() => {
+                          if (manualStepTitle.trim()) {
+                            setManualSteps((s) => [...s, { title: manualStepTitle.trim(), estimatedMinutes: manualStepMins }]);
+                            setManualStepTitle('');
+                            setManualStepMins(30);
+                          }
+                        }}
+                        disabled={!manualStepTitle.trim()}
+                        className="text-xs px-3 py-2 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 disabled:opacity-40 text-slate-600 dark:text-gray-300 rounded-lg font-medium transition-colors border border-slate-200 dark:border-gray-700"
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -462,12 +476,14 @@ export default function InputPage() {
                     try {
                       await createManualProject({
                         title: manualTitle.trim(),
+                        startDate: manualStartDate || null,
                         deadline: manualDeadline || null,
                         projectPriority: manualPriority,
                         tasks: manualSteps,
                         ...(filterPerson ? { ownerId: filterPerson } : {}),
                       });
                       setManualTitle('');
+                      setManualStartDate('');
                       setManualDeadline('');
                       setManualSteps([]);
                       setShowInput(false);
@@ -613,7 +629,7 @@ function ProjectDashboardCard({
     <>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3.5 flex-wrap">
+        <div className="flex items-center gap-2 px-4 py-3.5 flex-wrap min-w-0">
           <button
             className="flex items-center gap-2 flex-1 min-w-0 text-left"
             onClick={() => setExpanded((s) => !s)}
@@ -623,6 +639,7 @@ function ProjectDashboardCard({
               <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{project.title}</p>
               <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
                 {project.tasks.length} task{project.tasks.length !== 1 ? 's' : ''}
+                {project.startDate && ` · starts ${project.startDate}`}
                 {project.deadline && ` · due ${project.deadline}`}
               </p>
             </div>
@@ -649,7 +666,7 @@ function ProjectDashboardCard({
           </span>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
             {project.status === 'pending' && (
               <button
                 onClick={goToReview}
@@ -801,7 +818,7 @@ function ProjectDashboardCard({
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
                 />
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-slate-500 dark:text-gray-400">Minutes:</label>
                     <input

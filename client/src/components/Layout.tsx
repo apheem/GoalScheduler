@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const currentIndex = STEPS.findIndex((s) => s.path === location.pathname);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col overflow-x-hidden">
       {/* Top bar */}
       <header className="bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 sticky top-0 z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">

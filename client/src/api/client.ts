@@ -60,7 +60,7 @@ export function updateTask(taskId: string, updates: Record<string, unknown>): Pr
 
 export function updateProject(
   projectId: string,
-  updates: { deadline?: string | null; allowedDays?: number[] | null; allowedStartHour?: number | null; allowedEndHour?: number | null; projectPriority?: number }
+  updates: { deadline?: string | null; startDate?: string | null; allowedDays?: number[] | null; allowedStartHour?: number | null; allowedEndHour?: number | null; projectPriority?: number }
 ): Promise<unknown> {
   return request(`/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify(updates) });
 }
@@ -106,6 +106,7 @@ export function deleteProject(projectId: string): Promise<unknown> {
 export function createManualProject(payload: {
   title: string;
   deadline?: string | null;
+  startDate?: string | null;
   projectPriority?: number;
   ownerId?: string | null;
   tasks: Array<{ title: string; estimatedMinutes: number }>;
@@ -117,6 +118,7 @@ export function createQuickTask(payload: {
   title: string;
   estimatedMinutes: number;
   ownerId?: string | null;
+  startDate?: string | null;
 }): Promise<Project> {
   return request('/projects/quick-task', { method: 'POST', body: JSON.stringify(payload) });
 }

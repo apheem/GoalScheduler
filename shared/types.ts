@@ -52,6 +52,7 @@ export interface Project {
   status: ProjectStatus;
   weekOf: string;
   deadline: string | null;       // ISO date "2026-04-15"
+  startDate: string | null;      // ISO date — earliest scheduling date
   projectPriority: number;       // 1=most important, 5=least important
   allowedDays: number[] | null;  // override global workDays for this project
   allowedStartHour: number | null;
