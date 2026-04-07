@@ -64,8 +64,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             })}
           </div>
 
-          {/* Settings link */}
-          <div className="w-24 hidden sm:flex justify-end">
+          {/* Settings link — always visible */}
+          <div className="flex-shrink-0 flex justify-end">
             <button
               onClick={() => navigate('/setup')}
               className={`text-xs font-medium px-2 py-1 rounded-lg transition-colors ${
@@ -74,7 +74,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   : 'text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300'
               }`}
             >
-              ⚙️ Setup
+              <span>⚙️</span>
+              <span className="hidden sm:inline"> Setup</span>
             </button>
           </div>
         </div>

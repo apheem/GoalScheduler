@@ -613,7 +613,7 @@ function ProjectDashboardCard({
     <>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3.5">
+        <div className="flex items-center gap-2 px-4 py-3.5 flex-wrap">
           <button
             className="flex items-center gap-2 flex-1 min-w-0 text-left"
             onClick={() => setExpanded((s) => !s)}
