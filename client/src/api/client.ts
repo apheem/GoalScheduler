@@ -123,6 +123,10 @@ export function createQuickTask(payload: {
   return request('/projects/quick-task', { method: 'POST', body: JSON.stringify(payload) });
 }
 
+export function assignAllTasks(projectId: string, personId: string): Promise<unknown> {
+  return request(`/projects/${projectId}/assign-all`, { method: 'POST', body: JSON.stringify({ personId }) });
+}
+
 export function unscheduleProject(projectId: string): Promise<{ ok: boolean; removed: number }> {
   return request(`/schedule/project/${projectId}`, { method: 'DELETE' });
 }

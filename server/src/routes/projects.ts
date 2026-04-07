@@ -87,6 +87,38 @@ router.delete('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/projects/:id/assign-all — assign a person to every task in a project
+router.post('/:id/assign-all', (req, res) => {
+  const { id } = req.params;
+  const { personId } = req.body as { personId: string };
+
+  if (!personId) {
+    return res.status(400).json({ error: 'personId is required' });
+  }
+
+  const projectTasks = db.select().from(tasks).where(eq(tasks.projectId, id)).all();
+
+  for (const t of projectTasks) {
+    const currentIds: string[] = t.assigneeIds ? JSON.parse(t.assigneeIds) : [];
+    if (!currentIds.includes(personId)) {
+      currentIds.push(personId);
+    }
+    db.update(tasks)
+      .set({ assigneeIds: JSON.stringify(currentIds) })
+      .where(eq(tasks.id, t.id))
+      .run();
+  }
+
+  // Also set as project owner if not already set
+  const project = db.select().from(projects).where(eq(projects.id, id)).get();
+  if (project && !project.ownerId) {
+    db.update(projects).set({ ownerId: personId } as any).where(eq(projects.id, id)).run();
+  }
+
+  const updatedTasks = db.select().from(tasks).where(eq(tasks.projectId, id)).all().map(deserializeTask);
+  res.json({ ok: true, tasks: updatedTasks });
+});
+
 // POST /api/projects/manual — create a project with user-defined steps (skip AI)
 router.post('/manual', (req, res) => {
   const { title, deadline, startDate, projectPriority, ownerId, tasks: inputTasks } = req.body as {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask } from '../api/client';
+import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask, assignAllTasks } from '../api/client';
 import TaskEditModal from '../components/TaskEditModal';
 import Layout from '../components/Layout';
 import PeopleManager from '../components/PeopleManager';
@@ -40,16 +40,19 @@ export default function InputPage() {
 
   // AI Breakdown state
   const [aiStartDate, setAiStartDate] = useState('');
+  const [aiOwner, setAiOwner] = useState('');
 
   // Quick Task state
   const [quickTitle, setQuickTitle] = useState('');
   const [quickMins, setQuickMins] = useState(30);
   const [quickStartDate, setQuickStartDate] = useState('');
+  const [quickOwner, setQuickOwner] = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
 
   // Manual Project state
   const [manualTitle, setManualTitle] = useState('');
+  const [manualOwner, setManualOwner] = useState('');
   const [manualDeadline, setManualDeadline] = useState('');
   const [manualStartDate, setManualStartDate] = useState('');
   const [manualPriority, setManualPriority] = useState(3);
@@ -89,12 +92,13 @@ export default function InputPage() {
     mutationFn: () => parseGoals({ rawInput, workingHours: {
       startHour: 9, endHour: 18, workDays: [1,2,3,4,5],
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    }, ...(filterPerson ? { ownerId: filterPerson } : {}), ...(aiStartDate ? { startDate: aiStartDate } : {}) }),
+    }, ...(aiOwner ? { ownerId: aiOwner } : filterPerson ? { ownerId: filterPerson } : {}), ...(aiStartDate ? { startDate: aiStartDate } : {}) }),
     onSuccess: (data) => {
       queryClient.setQueryData(['projects', 'parsed'], data.projects);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setRawInput('');
       setAiStartDate('');
+      setAiOwner('');
       setShowInput(false);
       refetchProjects();
     },
@@ -257,14 +261,31 @@ export default function InputPage() {
                   </div>
                 )}
 
-                <div className="px-5 pt-2">
-                  <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Start date (optional)</label>
-                  <input
-                    type="date"
-                    className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    value={aiStartDate}
-                    onChange={(e) => setAiStartDate(e.target.value)}
-                  />
+                <div className="px-5 pt-2 flex flex-col sm:flex-row gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Start date (optional)</label>
+                    <input
+                      type="date"
+                      className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      value={aiStartDate}
+                      onChange={(e) => setAiStartDate(e.target.value)}
+                    />
+                  </div>
+                  {people.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Assign to (optional)</label>
+                      <select
+                        value={aiOwner}
+                        onChange={(e) => setAiOwner(e.target.value)}
+                        className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      >
+                        <option value="">Anyone</option>
+                        {people.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-5 py-5">
@@ -309,7 +330,7 @@ export default function InputPage() {
                     onChange={(e) => setQuickTitle(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Estimated minutes</label>
                     <input
@@ -331,6 +352,21 @@ export default function InputPage() {
                       onChange={(e) => setQuickStartDate(e.target.value)}
                     />
                   </div>
+                  {people.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Assign to (optional)</label>
+                      <select
+                        value={quickOwner}
+                        onChange={(e) => setQuickOwner(e.target.value)}
+                        className="w-full sm:w-48 border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      >
+                        <option value="">Anyone</option>
+                        {people.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {quickError && (
@@ -346,10 +382,11 @@ export default function InputPage() {
                     setQuickLoading(true);
                     setQuickError(null);
                     try {
-                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(filterPerson ? { ownerId: filterPerson } : {}), ...(quickStartDate ? { startDate: quickStartDate } : {}) });
+                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(quickOwner ? { ownerId: quickOwner } : filterPerson ? { ownerId: filterPerson } : {}), ...(quickStartDate ? { startDate: quickStartDate } : {}) });
                       setQuickTitle('');
                       setQuickMins(30);
                       setQuickStartDate('');
+                      setQuickOwner('');
                       setShowInput(false);
                       refetchProjects();
                     } catch (err) {
@@ -416,6 +453,21 @@ export default function InputPage() {
                       ))}
                     </select>
                   </div>
+                  {people.length > 0 && (
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5">Project owner (optional)</label>
+                      <select
+                        value={manualOwner}
+                        onChange={(e) => setManualOwner(e.target.value)}
+                        className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      >
+                        <option value="">Anyone</option>
+                        {people.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* Steps list */}
@@ -507,12 +559,13 @@ export default function InputPage() {
                         deadline: manualDeadline || null,
                         projectPriority: manualPriority,
                         tasks: manualSteps,
-                        ...(filterPerson ? { ownerId: filterPerson } : {}),
+                        ...(manualOwner ? { ownerId: manualOwner } : filterPerson ? { ownerId: filterPerson } : {}),
                       });
                       setManualTitle('');
                       setManualStartDate('');
                       setManualDeadline('');
                       setManualSteps([]);
+                      setManualOwner('');
                       setShowInput(false);
                       refetchProjects();
                     } catch (err) {
@@ -577,6 +630,7 @@ function ProjectDashboardCard({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [assigningAll, setAssigningAll] = useState(false);
 
   const badge = STATUS_BADGE[project.status] ?? STATUS_BADGE.pending;
 
@@ -666,6 +720,7 @@ function ProjectDashboardCard({
               <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{project.title}</p>
               <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
                 {project.tasks.length} task{project.tasks.length !== 1 ? 's' : ''}
+                {(() => { const owner = people.find((p) => p.id === project.ownerId); return owner ? ` · ${owner.name}` : ''; })()}
                 {project.startDate && ` · starts ${project.startDate}`}
                 {project.deadline && ` · due ${project.deadline}`}
               </p>
@@ -760,6 +815,50 @@ function ProjectDashboardCard({
         {/* Expanded task list */}
         {expanded && (
           <div className="border-t border-slate-100 dark:border-gray-800">
+            {/* Owner & Assign All bar */}
+            {people.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-gray-800/40 border-b border-slate-100 dark:border-gray-800">
+                <span className="text-xs text-slate-500 dark:text-gray-400">Owner:</span>
+                <select
+                  value={project.ownerId ?? ''}
+                  onChange={(e) => {
+                    updateProject(project.id, { ownerId: e.target.value || null } as any);
+                    onRefresh();
+                  }}
+                  className="text-xs border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Unassigned</option>
+                  {people.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <div className="flex-1" />
+                <button
+                  disabled={assigningAll}
+                  onClick={async () => {
+                    const targetId = project.ownerId;
+                    if (!targetId) {
+                      setDeleteError('Set a project owner first to assign all tasks');
+                      return;
+                    }
+                    setAssigningAll(true);
+                    try {
+                      await assignAllTasks(project.id, targetId);
+                      onRefresh();
+                    } catch (err) {
+                      setDeleteError((err as Error).message);
+                    } finally {
+                      setAssigningAll(false);
+                    }
+                  }}
+                  className="text-xs px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50 text-indigo-600 dark:text-indigo-400 rounded-lg font-medium transition-colors border border-indigo-200 dark:border-indigo-800"
+                  title="Assign the project owner to every task in this project"
+                >
+                  {assigningAll ? '...' : 'Assign owner to all tasks'}
+                </button>
+              </div>
+            )}
+
             {project.tasks.length === 0 && !addingTask && (
               <p className="px-5 py-4 text-xs text-slate-400 dark:text-gray-500 italic">No tasks yet.</p>
             )}
