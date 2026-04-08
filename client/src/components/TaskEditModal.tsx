@@ -116,7 +116,7 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
             </div>
 
             {/* Time row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
                   Total time (minutes)
@@ -158,7 +158,7 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
                   Start date <span className="normal-case font-normal">(optional)</span>

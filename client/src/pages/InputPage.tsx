@@ -711,49 +711,80 @@ function ProjectDashboardCard({
     <>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3.5 flex-wrap min-w-0">
-          <button
-            className="flex items-center gap-2 flex-1 min-w-0 text-left"
-            onClick={() => setExpanded((s) => !s)}
-          >
-            <span className="text-slate-300 dark:text-gray-600 text-xs">{expanded ? '▲' : '▼'}</span>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{project.title}</p>
-              <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
-                {project.tasks.length} task{project.tasks.length !== 1 ? 's' : ''}
-                {(() => { const owner = people.find((p) => p.id === project.ownerId); return owner ? ` · ${owner.name}` : ''; })()}
-                {project.startDate && ` · starts ${project.startDate}`}
-                {project.deadline && ` · due ${project.deadline}`}
-              </p>
+        <div className="px-4 py-3.5 space-y-2">
+          {/* Row 1: Title + badges */}
+          <div className="flex items-start gap-2 min-w-0">
+            <button
+              className="flex items-center gap-2 flex-1 min-w-0 text-left"
+              onClick={() => setExpanded((s) => !s)}
+            >
+              <span className="text-slate-300 dark:text-gray-600 text-xs mt-0.5">{expanded ? '▲' : '▼'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{project.title}</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5 truncate">
+                  {project.tasks.length} task{project.tasks.length !== 1 ? 's' : ''}
+                  {(() => { const owner = people.find((p) => p.id === project.ownerId); return owner ? ` · ${owner.name}` : ''; })()}
+                  {project.startDate && ` · starts ${project.startDate}`}
+                  {project.deadline && ` · due ${project.deadline}`}
+                </p>
+              </div>
+            </button>
+
+            {/* Priority + status badges */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <select
+                value={project.projectPriority ?? 3}
+                onChange={(e) => {
+                  const val = +e.target.value;
+                  updateProject(project.id, { projectPriority: val });
+                  onRefresh();
+                }}
+                className={`text-xs px-1.5 py-0.5 rounded-full font-medium border-0 cursor-pointer appearance-none text-center ${PROJECT_PRIORITY[project.projectPriority ?? 3]?.color ?? PROJECT_PRIORITY[3].color}`}
+                title="Project priority (1=Critical, 5=Backlog)"
+              >
+                {[1,2,3,4,5].map((n) => (
+                  <option key={n} value={n}>{PROJECT_PRIORITY[n].short} — {PROJECT_PRIORITY[n].label}</option>
+                ))}
+              </select>
+
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
+                {badge.label}
+              </span>
+
+              {/* Delete button (inline with badges) */}
+              {confirmDelete ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => deleteProjMutation.mutate()}
+                    className="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-xs px-2 py-1 border border-slate-200 dark:border-gray-700 text-slate-500 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs p-1.5 text-slate-300 dark:text-gray-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Delete project"
+                >
+                  🗑
+                </button>
+              )}
             </div>
-          </button>
+          </div>
 
-          {/* Priority selector */}
-          <select
-            value={project.projectPriority ?? 3}
-            onChange={(e) => {
-              const val = +e.target.value;
-              updateProject(project.id, { projectPriority: val });
-              onRefresh();
-            }}
-            className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 border-0 cursor-pointer appearance-none text-center ${PROJECT_PRIORITY[project.projectPriority ?? 3]?.color ?? PROJECT_PRIORITY[3].color}`}
-            title="Project priority (1=Critical, 5=Backlog)"
-          >
-            {[1,2,3,4,5].map((n) => (
-              <option key={n} value={n}>{PROJECT_PRIORITY[n].short} — {PROJECT_PRIORITY[n].label}</option>
-            ))}
-          </select>
-
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.color}`}>
-            {badge.label}
-          </span>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+          {/* Row 2: Action buttons — scrollable on mobile */}
+          <div className="flex items-center gap-1.5 overflow-x-auto -mx-4 px-4 pb-0.5">
             {project.status === 'pending' && (
               <button
                 onClick={goToReview}
-                className="text-xs px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                className="text-xs px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0"
               >
                 Review →
               </button>
@@ -761,7 +792,7 @@ function ProjectDashboardCard({
             {project.status === 'confirmed' && (
               <button
                 onClick={handleSchedule}
-                className="text-xs px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                className="text-xs px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0"
               >
                 Schedule →
               </button>
@@ -770,10 +801,10 @@ function ProjectDashboardCard({
               <button
                 onClick={() => unscheduleMutation.mutate()}
                 disabled={unscheduleMutation.isPending}
-                className="text-xs px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                className="text-xs px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0"
                 title="Remove all calendar events for this project"
               >
-                {unscheduleMutation.isPending ? '…' : 'Remove from Calendar'}
+                {unscheduleMutation.isPending ? '…' : 'Unschedule'}
               </button>
             )}
             {project.tasks.some((t) => t.status === 'scheduled' || t.status === 'rescheduled') && (
@@ -794,36 +825,10 @@ function ProjectDashboardCard({
                   }
                 }}
                 disabled={rescheduling}
-                className="text-xs px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                className="text-xs px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0"
                 title="Remove incomplete tasks from calendar and reschedule them"
               >
-                {rescheduling ? '…' : 'Reschedule Remaining'}
-              </button>
-            )}
-            {/* Delete project */}
-            {confirmDelete ? (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-red-500">Delete project?</span>
-                <button
-                  onClick={() => deleteProjMutation.mutate()}
-                  className="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="text-xs px-2 py-1 border border-slate-200 dark:border-gray-700 text-slate-500 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  No
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="text-xs p-1.5 text-slate-300 dark:text-gray-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Delete project"
-              >
-                🗑
+                {rescheduling ? '…' : 'Reschedule'}
               </button>
             )}
           </div>
@@ -903,13 +908,13 @@ function ProjectDashboardCard({
                     onClick={() => setEditingTask(task)}
                   >
                     <p className="text-sm text-slate-800 dark:text-gray-200 leading-snug truncate">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-slate-400 dark:text-gray-500">{task.estimatedMinutes} min</span>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="text-xs text-slate-400 dark:text-gray-500">{task.estimatedMinutes}m</span>
                       {task.startDate && (
-                        <span className="text-xs text-blue-500 dark:text-blue-400">starts {task.startDate}</span>
+                        <span className="text-xs text-blue-500 dark:text-blue-400">from {task.startDate}</span>
                       )}
                       {task.deadline && (
-                        <span className="text-xs text-red-400 dark:text-red-400">due {task.deadline}</span>
+                        <span className="text-xs text-red-400">due {task.deadline}</span>
                       )}
                       {task.maxBlockMinutes != null && (
                         <span className="text-xs text-indigo-500 dark:text-indigo-400">✂ {task.maxBlockMinutes}m/day</span>
