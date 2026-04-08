@@ -85,11 +85,11 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+        <div className="w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden flex flex-col">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-800">
+          <div className="flex items-center justify-between px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-gray-800 flex-shrink-0">
             <h2 className="font-bold text-slate-900 dark:text-white text-lg">Edit task</h2>
             <button
               onClick={onClose}
@@ -99,7 +99,7 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
             </button>
           </div>
 
-          <div className="px-6 py-5 space-y-5 overflow-y-auto max-h-[70vh]">
+          <div className="px-6 py-4 sm:py-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
 
             {/* Title */}
             <div className="space-y-1.5">
@@ -372,7 +372,7 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 px-6 py-4 border-t border-slate-100 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/50">
+          <div className="flex gap-3 px-6 py-3 sm:py-4 border-t border-slate-100 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/50 flex-shrink-0">
             <button
               onClick={onClose}
               className="flex-1 py-2.5 border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-300 rounded-xl text-sm font-semibold hover:bg-white dark:hover:bg-gray-800 transition-colors"
