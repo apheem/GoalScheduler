@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask, assignAllTasks } from '../api/client';
+import { parseGoals, createTask, deleteTask, deleteProject, confirmProject, scheduleTasks, updateTask, updateProject, unscheduleProject, createManualProject, createQuickTask, assignAllTasks, rescheduleRemaining } from '../api/client';
 import TaskEditModal from '../components/TaskEditModal';
 import Layout from '../components/Layout';
 import PeopleManager from '../components/PeopleManager';
@@ -631,6 +631,7 @@ function ProjectDashboardCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [assigningAll, setAssigningAll] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
 
   const badge = STATUS_BADGE[project.status] ?? STATUS_BADGE.pending;
 
@@ -775,6 +776,30 @@ function ProjectDashboardCard({
                 {unscheduleMutation.isPending ? '…' : 'Remove from Calendar'}
               </button>
             )}
+            {project.tasks.some((t) => t.status === 'scheduled' || t.status === 'rescheduled') && (
+              <button
+                onClick={async () => {
+                  setRescheduling(true);
+                  try {
+                    const result = await rescheduleRemaining(project.id);
+                    queryClient.invalidateQueries({ queryKey: ['projects'] });
+                    if (result.unschedulable?.length > 0) {
+                      const reasons = result.unschedulable.map((u) => u.reason).filter((v, i, a) => a.indexOf(v) === i);
+                      setDeleteError(`${result.unschedulable.length} task(s) couldn't be rescheduled: ${reasons.join('; ')}`);
+                    }
+                  } catch (err) {
+                    setDeleteError((err as Error).message);
+                  } finally {
+                    setRescheduling(false);
+                  }
+                }}
+                disabled={rescheduling}
+                className="text-xs px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                title="Remove incomplete tasks from calendar and reschedule them"
+              >
+                {rescheduling ? '…' : 'Reschedule Remaining'}
+              </button>
+            )}
             {/* Delete project */}
             {confirmDelete ? (
               <div className="flex items-center gap-1">
@@ -880,6 +905,12 @@ function ProjectDashboardCard({
                     <p className="text-sm text-slate-800 dark:text-gray-200 leading-snug truncate">{task.title}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-slate-400 dark:text-gray-500">{task.estimatedMinutes} min</span>
+                      {task.startDate && (
+                        <span className="text-xs text-blue-500 dark:text-blue-400">starts {task.startDate}</span>
+                      )}
+                      {task.deadline && (
+                        <span className="text-xs text-red-400 dark:text-red-400">due {task.deadline}</span>
+                      )}
                       {task.maxBlockMinutes != null && (
                         <span className="text-xs text-indigo-500 dark:text-indigo-400">✂ {task.maxBlockMinutes}m/day</span>
                       )}

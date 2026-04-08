@@ -53,7 +53,7 @@ router.get('/', (req, res) => {
 // PATCH /api/tasks/:id
 router.patch('/:id', (req, res) => {
   const { id } = req.params;
-  const { title, estimatedMinutes, maxBlockMinutes, priority, status, assigneeIds, allowedDays, dependsOnTaskId, allowedStartHour, allowedEndHour } = req.body;
+  const { title, estimatedMinutes, maxBlockMinutes, priority, status, assigneeIds, allowedDays, dependsOnTaskId, allowedStartHour, allowedEndHour, deadline, startDate } = req.body;
 
   const update: Partial<typeof tasks.$inferInsert> = {};
   if (title !== undefined) update.title = title;
@@ -66,6 +66,8 @@ router.patch('/:id', (req, res) => {
   if ('dependsOnTaskId' in req.body) update.dependsOnTaskId = dependsOnTaskId ?? null;
   if ('allowedStartHour' in req.body) update.allowedStartHour = allowedStartHour ?? null;
   if ('allowedEndHour' in req.body) update.allowedEndHour = allowedEndHour ?? null;
+  if ('deadline' in req.body) update.deadline = deadline ?? null;
+  if ('startDate' in req.body) update.startDate = startDate ?? null;
 
   if (status === 'complete') {
     update.completedAt = Date.now();

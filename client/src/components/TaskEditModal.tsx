@@ -24,6 +24,8 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
   const [priority, setPriority]   = useState<Priority>(task.priority ?? 'medium');
   const [assigneeIds, setAssigneeIds] = useState<string[]>(task.assigneeIds ?? []);
   const [dependsOnTaskId, setDependsOnTaskId] = useState<string | null>(task.dependsOnTaskId ?? null);
+  const [deadline, setDeadline] = useState(task.deadline ?? '');
+  const [startDate, setStartDate] = useState(task.startDate ?? '');
   const [useCustomDays, setUseCustomDays] = useState(!!task.allowedDays);
   const [allowedDays, setAllowedDays] = useState<number[]>(task.allowedDays ?? [1,2,3,4,5]);
   const [useTimeWindow, setUseTimeWindow] = useState(task.allowedStartHour != null || task.allowedEndHour != null);
@@ -60,6 +62,8 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
       priority,
       assigneeIds,
       dependsOnTaskId,
+      deadline: deadline || null,
+      startDate: startDate || null,
       allowedDays: useCustomDays ? allowedDays : null,
       allowedStartHour: useTimeWindow ? taskStartHour : null,
       allowedEndHour: useTimeWindow ? taskEndHour : null,
@@ -150,6 +154,34 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
                     e.g. 30 = max 30 min/day on this task
                   </p>
                 )}
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
+                  Start date <span className="normal-case font-normal">(optional)</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <p className="text-xs text-slate-400 dark:text-gray-500">Won't schedule before this date</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
+                  Deadline <span className="normal-case font-normal">(optional)</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                />
+                <p className="text-xs text-slate-400 dark:text-gray-500">Must finish by this date</p>
               </div>
             </div>
 

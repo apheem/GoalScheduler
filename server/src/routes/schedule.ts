@@ -143,8 +143,8 @@ router.post('/', async (req, res) => {
           estimatedMinutes: t.estimatedMinutes,
           maxBlockMinutes: t.maxBlockMinutes ?? null,
           priority: (t.priority as Priority) ?? 'medium',
-          deadline: proj?.deadline ?? null,
-          startDate: proj?.startDate ?? null,
+          deadline: t.deadline ?? proj?.deadline ?? null,
+          startDate: t.startDate ?? proj?.startDate ?? null,
           dependsOnTaskId: t.dependsOnTaskId,
           order: t.order,
           allowedDays: effectiveDays,
@@ -247,6 +247,156 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('[schedule] Error:', err);
     res.status(500).json({ error: 'Scheduling failed. Please try again.' });
+  }
+});
+
+// POST /api/schedule/project/:projectId/reschedule-remaining — unschedule incomplete tasks and reschedule them
+router.post('/project/:projectId/reschedule-remaining', async (req, res) => {
+  const { projectId } = req.params;
+  const wh: ScheduleRequest['workingHours'] = req.body.workingHours;
+
+  try {
+    // Find tasks that are scheduled/rescheduled but NOT complete
+    const projectTasks = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all()
+      .filter((t) => ['scheduled', 'rescheduled', 'confirmed'].includes(t.status) && t.status !== 'complete');
+
+    const incompleteTasks = projectTasks.filter((t) => t.status === 'scheduled' || t.status === 'rescheduled');
+
+    if (!incompleteTasks.length && !projectTasks.filter((t) => t.status === 'confirmed').length) {
+      return res.json({ scheduled: 0, blocks: [], unschedulable: [] });
+    }
+
+    // Delete calendar events and blocks for incomplete scheduled tasks
+    const connectedCalendars = await getConnectedCalendars();
+    const { deleteEvent } = await import('../services/calendarService');
+
+    for (const t of incompleteTasks) {
+      const existingBlocks = db.select().from(taskBlocks).where(eq(taskBlocks.taskId, t.id)).all();
+      for (const block of existingBlocks) {
+        if (block.googleCalendarEventId) {
+          let eventMap: Record<string, string> | null = null;
+          try {
+            const parsed = JSON.parse(block.googleCalendarEventId);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) eventMap = parsed;
+          } catch { /* legacy */ }
+
+          if (eventMap) {
+            for (const [personId, eventId] of Object.entries(eventMap)) {
+              try { await deleteEvent(eventId, personId); } catch { /* already deleted */ }
+            }
+          } else {
+            for (const personId of connectedCalendars) {
+              try { await deleteEvent(block.googleCalendarEventId, personId); break; } catch { /* not here */ }
+            }
+          }
+        }
+      }
+      db.delete(taskBlocks).where(eq(taskBlocks.taskId, t.id)).run();
+      db.update(tasks).set({ status: 'confirmed', scheduledStart: null, scheduledEnd: null }).where(eq(tasks.id, t.id)).run();
+    }
+
+    // Now schedule all confirmed tasks in this project (same logic as main schedule)
+    const toSchedule = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all()
+      .filter((t) => t.status === 'confirmed');
+
+    if (!toSchedule.length) return res.json({ scheduled: 0, blocks: [], unschedulable: [] });
+
+    const projectMap = new Map(db.select().from(projects).all().map((p) => [p.id, p]));
+    const peopleMap = new Map(db.select().from(people).all().map((p) => [p.id, p]));
+
+    const now = new Date();
+    const rangeEnd = addDays(now, 42);
+    const existingEvents = await getEventsInRange(formatISO(now), formatISO(rangeEnd));
+
+    const defaultWh = wh ?? { startHour: 9, endHour: 18, workDays: [1,2,3,4,5], timezone: 'America/Chicago', maxMinutesPerDay: 240 };
+
+    const { scheduled, unschedulable } = scheduleTasks(
+      toSchedule.map((t) => {
+        const proj = projectMap.get(t.projectId);
+        const taskAssigneeIds: string[] = t.assigneeIds ? JSON.parse(t.assigneeIds) : t.assigneeId ? [t.assigneeId] : [];
+        const taskAllowedDays = t.allowedDays ? JSON.parse(t.allowedDays) : null;
+        const projAllowedDays = proj?.allowedDays ? JSON.parse(proj.allowedDays) : null;
+        const allAssignees = taskAssigneeIds.map((id) => peopleMap.get(id)).filter(Boolean);
+
+        let effectiveDays = taskAllowedDays ?? projAllowedDays;
+        let effectiveStartHour = proj?.allowedStartHour ?? null;
+        let effectiveEndHour = proj?.allowedEndHour ?? null;
+        let effectiveMaxPerDay: number | null = null;
+
+        if (allAssignees.length > 0) {
+          if (!effectiveDays) {
+            let daysSets = allAssignees.map((a) => JSON.parse(a!.workDays) as number[]);
+            effectiveDays = daysSets[0].filter((d: number) => daysSets.every((ds) => ds.includes(d)));
+          }
+          if (effectiveStartHour == null) effectiveStartHour = Math.max(...allAssignees.map((a) => a!.startHour));
+          if (effectiveEndHour == null) effectiveEndHour = Math.min(...allAssignees.map((a) => a!.endHour));
+          effectiveMaxPerDay = Math.min(...allAssignees.map((a) => a!.maxMinutesPerDay));
+        }
+
+        const taskStartHour = t.allowedStartHour ?? null;
+        const taskEndHour = t.allowedEndHour ?? null;
+        if (taskStartHour != null) effectiveStartHour = taskStartHour;
+        if (taskEndHour != null) effectiveEndHour = taskEndHour;
+
+        return {
+          id: t.id,
+          estimatedMinutes: t.estimatedMinutes,
+          maxBlockMinutes: t.maxBlockMinutes ?? null,
+          priority: (t.priority as Priority) ?? 'medium',
+          deadline: t.deadline ?? proj?.deadline ?? null,
+          startDate: t.startDate ?? proj?.startDate ?? null,
+          dependsOnTaskId: t.dependsOnTaskId,
+          order: t.order,
+          allowedDays: effectiveDays,
+          allowedStartHour: effectiveStartHour,
+          allowedEndHour: effectiveEndHour,
+          assigneeKeys: taskAssigneeIds.length ? taskAssigneeIds : undefined,
+          maxMinutesPerDay: effectiveMaxPerDay,
+          projectPriority: proj?.projectPriority ?? 3,
+        };
+      }),
+      existingEvents,
+      defaultWh
+    );
+
+    // Persist blocks and create calendar events
+    const blocksByTask = new Map<string, typeof scheduled>();
+    for (const b of scheduled) {
+      if (!blocksByTask.has(b.taskId)) blocksByTask.set(b.taskId, []);
+      blocksByTask.get(b.taskId)!.push(b);
+    }
+
+    for (const [taskId, blocks] of blocksByTask) {
+      const task = toSchedule.find((t) => t.id === taskId)!;
+      const taskAssigneeIds: string[] = task.assigneeIds ? JSON.parse(task.assigneeIds) : task.assigneeId ? [task.assigneeId] : [];
+      const blockLabel = (i: number, total: number) => total > 1 ? ` (part ${i + 1}/${total})` : '';
+
+      const targetCalendars = taskAssigneeIds.length ? taskAssigneeIds.filter((id) => connectedCalendars.includes(id)) : [];
+      if (!targetCalendars.length && connectedCalendars.includes(MAIN_CALENDAR)) targetCalendars.push(MAIN_CALENDAR);
+
+      for (const b of blocks) {
+        const calEventMap: Record<string, string> = {};
+        if (targetCalendars.length) {
+          for (const personId of targetCalendars) {
+            try {
+              const eventId = await createEvent({ summary: `${task.title}${blockLabel(b.blockIndex, b.totalBlocks)}`, start: b.start, end: b.end, description: 'Scheduled by GoalScheduler', personId });
+              if (eventId) calEventMap[personId] = eventId;
+            } catch { /* skip */ }
+          }
+        }
+        const calEventJson = Object.keys(calEventMap).length > 0 ? JSON.stringify(calEventMap) : null;
+        db.insert(taskBlocks).values({ id: uuidv4(), taskId, blockIndex: b.blockIndex, totalBlocks: b.totalBlocks, scheduledStart: b.start, scheduledEnd: b.end, googleCalendarEventId: calEventJson, status: 'scheduled' }).run();
+      }
+
+      const firstBlock = blocks[0];
+      const lastBlock = blocks[blocks.length - 1];
+      db.update(tasks).set({ status: 'scheduled', scheduledStart: firstBlock.start, scheduledEnd: lastBlock.end }).where(eq(tasks.id, taskId)).run();
+    }
+
+    res.json({ scheduled: scheduled.length, blocks: scheduled, unschedulable, calendarConnected: connectedCalendars.length > 0 });
+  } catch (err) {
+    console.error('[reschedule-remaining] Error:', err);
+    res.status(500).json({ error: 'Rescheduling failed. Please try again.' });
   }
 });
 

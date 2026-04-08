@@ -112,6 +112,8 @@ export function initDb() {
     `ALTER TABLE projects ADD COLUMN project_priority INTEGER NOT NULL DEFAULT 3`,
     `ALTER TABLE projects ADD COLUMN owner_id TEXT`,
     `ALTER TABLE projects ADD COLUMN start_date TEXT`,
+    `ALTER TABLE tasks ADD COLUMN deadline TEXT`,
+    `ALTER TABLE tasks ADD COLUMN start_date TEXT`,
   ];
 
   for (const sql of migrations) {

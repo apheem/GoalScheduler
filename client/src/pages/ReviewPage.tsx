@@ -33,12 +33,18 @@ export default function ReviewPage() {
 
   const confirmMutation = useMutation({
     mutationFn: (projectId: string) => confirmProject(projectId),
-    onSuccess: (_, projectId) => setConfirmedIds((prev) => new Set([...prev, projectId])),
+    onSuccess: (_, projectId) => {
+      setConfirmedIds((prev) => new Set([...prev, projectId]));
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
   });
 
   const rejectMutation = useMutation({
     mutationFn: (projectId: string) => rejectProject(projectId),
-    onSuccess: (_, projectId) => setRejectedIds((prev) => new Set([...prev, projectId])),
+    onSuccess: (_, projectId) => {
+      setRejectedIds((prev) => new Set([...prev, projectId]));
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
   });
 
   function handleUpdateTask(taskId: string, updates: Partial<Task>) {

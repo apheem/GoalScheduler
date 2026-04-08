@@ -127,6 +127,13 @@ export function assignAllTasks(projectId: string, personId: string): Promise<unk
   return request(`/projects/${projectId}/assign-all`, { method: 'POST', body: JSON.stringify({ personId }) });
 }
 
+export function rescheduleRemaining(projectId: string): Promise<{ scheduled: number; unschedulable: Array<{ taskId: string; reason: string }> }> {
+  return request(`/schedule/project/${projectId}/reschedule-remaining`, {
+    method: 'POST',
+    body: JSON.stringify({ workingHours: { startHour: 9, endHour: 18, workDays: [1,2,3,4,5], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } }),
+  });
+}
+
 export function unscheduleProject(projectId: string): Promise<{ ok: boolean; removed: number }> {
   return request(`/schedule/project/${projectId}`, { method: 'DELETE' });
 }

@@ -34,6 +34,8 @@ export interface Task {
   status: TaskStatus;
   order: number;
   dependsOnTaskId: string | null;
+  deadline: string | null;           // ISO date — per-task deadline
+  startDate: string | null;          // ISO date — per-task start date
   assigneeIds: string[];             // people responsible (empty = anyone)
   allowedDays: number[] | null;     // task-level day override
   allowedStartHour: number | null;  // e.g. 18 = "only after 6 PM"

@@ -26,6 +26,8 @@ export const tasks = sqliteTable('tasks', {
   status: text('status').notNull().default('pending'),
   order: integer('order').notNull().default(0),
   dependsOnTaskId: text('depends_on_task_id'),
+  deadline: text('deadline'),             // ISO date — per-task deadline
+  startDate: text('start_date'),         // ISO date — per-task start date
   assigneeId: text('assignee_id'),       // legacy — use assigneeIds
   assigneeIds: text('assignee_ids'),     // JSON string[] — multi-assignee
   allowedDays: text('allowed_days'),    // JSON array or null (task-level override)
