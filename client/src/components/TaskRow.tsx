@@ -22,6 +22,12 @@ export default function TaskRow({ task, index, people, onUpdate }: Props) {
   const splitCount = task.maxBlockMinutes && task.maxBlockMinutes < task.estimatedMinutes
     ? Math.ceil(task.estimatedMinutes / task.maxBlockMinutes)
     : null;
+  const recurrenceLabel = (() => {
+    if (!task.recurrenceDays || !task.recurrenceDays.length) return null;
+    const short = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    if (task.recurrenceDays.length === 7) return 'every day';
+    return task.recurrenceDays.map((d) => short[d]).join('/');
+  })();
 
   return (
     <>
@@ -50,6 +56,11 @@ export default function TaskRow({ task, index, people, onUpdate }: Props) {
             {task.allowedDays && (
               <p className="text-xs text-slate-400 dark:text-gray-500">
                 📅 specific days only
+              </p>
+            )}
+            {recurrenceLabel && (
+              <p className="text-xs text-indigo-500 dark:text-indigo-400">
+                🔁 repeats {recurrenceLabel}
               </p>
             )}
           </div>

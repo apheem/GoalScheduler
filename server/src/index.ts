@@ -11,6 +11,7 @@ import scheduleRouter from './routes/schedule';
 import authRouter from './routes/auth';
 import peopleRouter from './routes/people';
 import { startReschedulerCron } from './jobs/endOfDayRescheduler';
+import { startDailyRecurrenceCron } from './jobs/dailyRecurrenceSpawner';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,13 @@ app.post('/api/dev/reschedule-now', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Manual trigger for spawning today's recurring task instances (normally runs at 00:00)
+app.post('/api/dev/spawn-recurring-now', async (req, res) => {
+  const { spawnDailyRecurringTasks } = await import('./jobs/dailyRecurrenceSpawner');
+  await spawnDailyRecurringTasks();
+  res.json({ ok: true });
+});
+
 // Clear all maxBlockMinutes values (dev utility)
 app.post('/api/dev/clear-max-block', async (req, res) => {
   const { db } = await import('./db');
@@ -66,6 +74,7 @@ if (isProduction) {
 // ─── Startup ──────────────────────────────────────────────────────────────────
 initDb();
 startReschedulerCron();
+startDailyRecurrenceCron();
 
 app.listen(PORT, () => {
   console.log(`[server] Running on http://localhost:${PORT}`);

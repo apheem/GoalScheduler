@@ -114,6 +114,10 @@ export function initDb() {
     `ALTER TABLE projects ADD COLUMN start_date TEXT`,
     `ALTER TABLE tasks ADD COLUMN deadline TEXT`,
     `ALTER TABLE tasks ADD COLUMN start_date TEXT`,
+    `ALTER TABLE tasks ADD COLUMN recurrence_days TEXT`,
+    `ALTER TABLE tasks ADD COLUMN is_recurring_template INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN recurring_template_id TEXT`,
+    `ALTER TABLE tasks ADD COLUMN last_spawned_date TEXT`,
   ];
 
   for (const sql of migrations) {

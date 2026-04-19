@@ -45,6 +45,14 @@ export interface Task {
   googleCalendarEventId: string | null;
   completedAt: number | null;
   rescheduleCount: number;
+  // ─── Daily recurrence ───────────────────────────────────────────────────
+  // When set on a task, the row is a *template*: it's never scheduled directly.
+  // At midnight, a background job clones it into a one-off instance for that
+  // day and lets the scheduler find an open slot in the calendar.
+  recurrenceDays: number[] | null;      // days of week (0=Sun..6=Sat); null = not recurring
+  isRecurringTemplate: boolean;          // true = template row, never scheduled
+  recurringTemplateId: string | null;    // on instances: id of the template they came from
+  lastSpawnedDate: string | null;        // on templates: ISO date of last spawn (YYYY-MM-DD)
 }
 
 export interface Project {

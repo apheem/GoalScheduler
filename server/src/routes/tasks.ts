@@ -11,12 +11,14 @@ function deserializeTask(row: typeof tasks.$inferSelect) {
     ...row,
     assigneeIds: row.assigneeIds ? JSON.parse(row.assigneeIds) : [],
     allowedDays: row.allowedDays ? JSON.parse(row.allowedDays) : null,
+    recurrenceDays: row.recurrenceDays ? JSON.parse(row.recurrenceDays) : null,
+    isRecurringTemplate: !!row.isRecurringTemplate,
   };
 }
 
 // POST /api/tasks — create a new task in an existing project
 router.post('/', (req, res) => {
-  const { projectId, title, estimatedMinutes, priority } = req.body;
+  const { projectId, title, estimatedMinutes, priority, recurrenceDays } = req.body;
   if (!projectId || !title?.trim()) {
     return res.status(400).json({ error: 'projectId and title are required' });
   }
@@ -24,6 +26,8 @@ router.post('/', (req, res) => {
   // Find the max current order in this project
   const existing = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all();
   const maxOrder = existing.reduce((max, t) => Math.max(max, t.order), -1);
+
+  const isRecurring = Array.isArray(recurrenceDays) && recurrenceDays.length > 0;
 
   const id = randomUUID();
   db.insert(tasks).values({
@@ -35,6 +39,8 @@ router.post('/', (req, res) => {
     status: 'pending',
     order: maxOrder + 1,
     rescheduleCount: 0,
+    recurrenceDays: isRecurring ? JSON.stringify(recurrenceDays) : null,
+    isRecurringTemplate: isRecurring ? 1 : 0,
   }).run();
 
   const created = db.select().from(tasks).where(eq(tasks.id, id)).get()!;
@@ -53,7 +59,7 @@ router.get('/', (req, res) => {
 // PATCH /api/tasks/:id
 router.patch('/:id', (req, res) => {
   const { id } = req.params;
-  const { title, estimatedMinutes, maxBlockMinutes, priority, status, assigneeIds, allowedDays, dependsOnTaskId, allowedStartHour, allowedEndHour, deadline, startDate } = req.body;
+  const { title, estimatedMinutes, maxBlockMinutes, priority, status, assigneeIds, allowedDays, dependsOnTaskId, allowedStartHour, allowedEndHour, deadline, startDate, recurrenceDays } = req.body;
 
   const update: Partial<typeof tasks.$inferInsert> = {};
   if (title !== undefined) update.title = title;
@@ -68,6 +74,12 @@ router.patch('/:id', (req, res) => {
   if ('allowedEndHour' in req.body) update.allowedEndHour = allowedEndHour ?? null;
   if ('deadline' in req.body) update.deadline = deadline ?? null;
   if ('startDate' in req.body) update.startDate = startDate ?? null;
+  if ('recurrenceDays' in req.body) {
+    const isRecurring = Array.isArray(recurrenceDays) && recurrenceDays.length > 0;
+    update.recurrenceDays = isRecurring ? JSON.stringify(recurrenceDays) : null;
+    update.isRecurringTemplate = isRecurring ? 1 : 0;
+    if (!isRecurring) update.lastSpawnedDate = null;
+  }
 
   if (status === 'complete') {
     update.completedAt = Date.now();

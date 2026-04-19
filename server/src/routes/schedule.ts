@@ -21,11 +21,12 @@ router.post('/', async (req, res) => {
 
   try {
     // Include both confirmed and already-scheduled tasks (re-schedule replaces old blocks)
+    // Recurring *templates* are never scheduled directly — only their spawned instances.
     const allProjectTasks = db
       .select()
       .from(tasks)
       .all()
-      .filter((t) => projectIds.includes(t.projectId) && ['confirmed', 'scheduled', 'rescheduled'].includes(t.status));
+      .filter((t) => projectIds.includes(t.projectId) && ['confirmed', 'scheduled', 'rescheduled'].includes(t.status) && !t.isRecurringTemplate);
 
     if (!allProjectTasks.length) {
       return res.status(400).json({ error: 'No confirmed tasks found' });
@@ -69,7 +70,7 @@ router.post('/', async (req, res) => {
       .select()
       .from(tasks)
       .all()
-      .filter((t) => projectIds.includes(t.projectId) && t.status === 'confirmed');
+      .filter((t) => projectIds.includes(t.projectId) && t.status === 'confirmed' && !t.isRecurringTemplate);
 
     // Load project overrides and people
     const projectMap = new Map(
@@ -258,7 +259,7 @@ router.post('/project/:projectId/reschedule-remaining', async (req, res) => {
   try {
     // Find tasks that are scheduled/rescheduled but NOT complete
     const projectTasks = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all()
-      .filter((t) => ['scheduled', 'rescheduled', 'confirmed'].includes(t.status) && t.status !== 'complete');
+      .filter((t) => ['scheduled', 'rescheduled', 'confirmed'].includes(t.status) && t.status !== 'complete' && !t.isRecurringTemplate);
 
     const incompleteTasks = projectTasks.filter((t) => t.status === 'scheduled' || t.status === 'rescheduled');
 
@@ -297,7 +298,7 @@ router.post('/project/:projectId/reschedule-remaining', async (req, res) => {
 
     // Now schedule all confirmed tasks in this project (same logic as main schedule)
     const toSchedule = db.select().from(tasks).where(eq(tasks.projectId, projectId)).all()
-      .filter((t) => t.status === 'confirmed');
+      .filter((t) => t.status === 'confirmed' && !t.isRecurringTemplate);
 
     if (!toSchedule.length) return res.json({ scheduled: 0, blocks: [], unschedulable: [] });
 

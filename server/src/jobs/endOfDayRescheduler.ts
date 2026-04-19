@@ -22,6 +22,7 @@ export async function runRescheduler() {
     .from(tasks)
     .all()
     .filter((t) => {
+      if (t.isRecurringTemplate) return false;
       if (t.status !== 'scheduled' && t.status !== 'rescheduled') return false;
       if (!t.scheduledStart) return false;
       return new Date(t.scheduledStart).getTime() < todayEnd;

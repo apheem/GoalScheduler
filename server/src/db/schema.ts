@@ -38,6 +38,11 @@ export const tasks = sqliteTable('tasks', {
   googleCalendarEventId: text('google_calendar_event_id'),
   completedAt: integer('completed_at'),
   rescheduleCount: integer('reschedule_count').notNull().default(0),
+  // Daily recurrence
+  recurrenceDays: text('recurrence_days'),                              // JSON number[] of weekdays (0=Sun..6=Sat), null = not recurring
+  isRecurringTemplate: integer('is_recurring_template').notNull().default(0),  // 1 = template, never scheduled directly
+  recurringTemplateId: text('recurring_template_id'),                   // id of the template this instance was spawned from
+  lastSpawnedDate: text('last_spawned_date'),                           // ISO date (YYYY-MM-DD) of most recent spawn
 });
 
 export const taskBlocks = sqliteTable('task_blocks', {

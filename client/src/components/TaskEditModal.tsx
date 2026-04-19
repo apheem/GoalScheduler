@@ -31,6 +31,8 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
   const [useTimeWindow, setUseTimeWindow] = useState(task.allowedStartHour != null || task.allowedEndHour != null);
   const [taskStartHour, setTaskStartHour] = useState(task.allowedStartHour ?? 9);
   const [taskEndHour, setTaskEndHour] = useState(task.allowedEndHour ?? 22);
+  const [isRecurring, setIsRecurring] = useState(!!task.recurrenceDays);
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>(task.recurrenceDays ?? [1,2,3,4,5]);
 
   // Tasks that can be dependencies (earlier in order, not itself)
   const eligibleDeps = siblingTasks.filter((t) => t.id !== task.id && t.order < task.order);
@@ -44,6 +46,12 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
 
   function toggleDay(day: number) {
     setAllowedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
+    );
+  }
+
+  function toggleRecurrenceDay(day: number) {
+    setRecurrenceDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
     );
   }
@@ -67,6 +75,7 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
       allowedDays: useCustomDays ? allowedDays : null,
       allowedStartHour: useTimeWindow ? taskStartHour : null,
       allowedEndHour: useTimeWindow ? taskEndHour : null,
+      recurrenceDays: isRecurring && recurrenceDays.length > 0 ? recurrenceDays : null,
     });
     onClose();
   }
@@ -185,8 +194,47 @@ export default function TaskEditModal({ task, siblingTasks = [], people, onSave,
               </div>
             </div>
 
+            {/* Repeat daily */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <div
+                  onClick={() => setIsRecurring((s) => !s)}
+                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${isRecurring ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-gray-700'}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${isRecurring ? 'left-4' : 'left-0.5'}`} />
+                </div>
+                <span className="text-xs font-semibold text-slate-600 dark:text-gray-300">
+                  🔁 Repeat every week
+                </span>
+              </label>
+
+              {isRecurring && (
+                <div className="pl-11 space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {DAYS.map((day, i) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleRecurrenceDay(i)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors ${
+                          recurrenceDays.includes(i)
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-gray-500">
+                    At 12 AM on each selected day, a new instance is auto-scheduled into an open slot on your calendar.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Dependency */}
-            {eligibleDeps.length > 0 && (
+            {eligibleDeps.length > 0 && !isRecurring && (
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
                   Must complete first (optional)

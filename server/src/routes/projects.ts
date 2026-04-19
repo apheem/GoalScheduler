@@ -11,6 +11,8 @@ function deserializeTask(row: typeof tasks.$inferSelect) {
     ...row,
     assigneeIds: row.assigneeIds ? JSON.parse(row.assigneeIds) : [],
     allowedDays: row.allowedDays ? JSON.parse(row.allowedDays) : null,
+    recurrenceDays: row.recurrenceDays ? JSON.parse(row.recurrenceDays) : null,
+    isRecurringTemplate: !!row.isRecurringTemplate,
   };
 }
 
