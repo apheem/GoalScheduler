@@ -176,7 +176,7 @@ router.post('/manual', (req, res) => {
 
 // POST /api/projects/quick-task — create a single-task project instantly
 router.post('/quick-task', (req, res) => {
-  const { title, estimatedMinutes, ownerId, startDate } = req.body as { title: string; estimatedMinutes: number; ownerId?: string | null; startDate?: string | null };
+  const { title, estimatedMinutes, ownerId, startDate, recurrenceDays } = req.body as { title: string; estimatedMinutes: number; ownerId?: string | null; startDate?: string | null; recurrenceDays?: number[] | null };
 
   if (!title || !estimatedMinutes) {
     res.status(400).json({ error: 'title and estimatedMinutes are required' });
@@ -187,6 +187,7 @@ router.post('/quick-task', (req, res) => {
   const taskId = randomUUID();
   const now = Date.now();
   const weekOf = new Date().toISOString().slice(0, 10);
+  const isRecurring = Array.isArray(recurrenceDays) && recurrenceDays.length > 0;
 
   db.insert(projects).values({
     id: projectId,
@@ -206,6 +207,9 @@ router.post('/quick-task', (req, res) => {
     estimatedMinutes,
     status: 'confirmed',
     order: 0,
+    assigneeIds: ownerId ? JSON.stringify([ownerId]) : null,
+    recurrenceDays: isRecurring ? JSON.stringify(recurrenceDays) : null,
+    isRecurringTemplate: isRecurring ? 1 : 0,
   }).run();
 
   const created = db.select().from(projects).where(eq(projects.id, projectId)).get();

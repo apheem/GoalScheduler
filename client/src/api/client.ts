@@ -119,6 +119,7 @@ export function createQuickTask(payload: {
   estimatedMinutes: number;
   ownerId?: string | null;
   startDate?: string | null;
+  recurrenceDays?: number[] | null;
 }): Promise<Project> {
   return request('/projects/quick-task', { method: 'POST', body: JSON.stringify(payload) });
 }

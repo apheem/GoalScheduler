@@ -49,6 +49,8 @@ export default function InputPage() {
   const [quickOwner, setQuickOwner] = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickIsRecurring, setQuickIsRecurring] = useState(false);
+  const [quickRecurrenceDays, setQuickRecurrenceDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   // Manual Project state
   const [manualTitle, setManualTitle] = useState('');
@@ -369,6 +371,52 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Repeat every week */}
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <div
+                      onClick={() => setQuickIsRecurring((s) => !s)}
+                      className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${quickIsRecurring ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-gray-700'}`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${quickIsRecurring ? 'left-4' : 'left-0.5'}`} />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-600 dark:text-gray-300">
+                      🔁 Repeat every week
+                    </span>
+                  </label>
+
+                  {quickIsRecurring && (
+                    <div className="pl-11 space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day, i) => {
+                          const on = quickRecurrenceDays.includes(i);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() =>
+                                setQuickRecurrenceDays((prev) =>
+                                  prev.includes(i) ? prev.filter((d) => d !== i) : [...prev, i].sort()
+                                )
+                              }
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors ${
+                                on
+                                  ? 'bg-indigo-600 text-white border-indigo-600'
+                                  : 'bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-slate-400 dark:text-gray-500">
+                        At 12 AM on each selected day, a new instance is auto-scheduled into an open slot on your calendar.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {quickError && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
                     <p className="text-sm text-red-700 dark:text-red-400">{quickError}</p>
@@ -377,16 +425,24 @@ export default function InputPage() {
 
                 <button
                   type="button"
-                  disabled={!quickTitle.trim() || quickLoading}
+                  disabled={!quickTitle.trim() || quickLoading || (quickIsRecurring && quickRecurrenceDays.length === 0)}
                   onClick={async () => {
                     setQuickLoading(true);
                     setQuickError(null);
                     try {
-                      await createQuickTask({ title: quickTitle.trim(), estimatedMinutes: quickMins, ...(quickOwner ? { ownerId: quickOwner } : filterPerson ? { ownerId: filterPerson } : {}), ...(quickStartDate ? { startDate: quickStartDate } : {}) });
+                      await createQuickTask({
+                        title: quickTitle.trim(),
+                        estimatedMinutes: quickMins,
+                        ...(quickOwner ? { ownerId: quickOwner } : filterPerson ? { ownerId: filterPerson } : {}),
+                        ...(quickStartDate ? { startDate: quickStartDate } : {}),
+                        ...(quickIsRecurring && quickRecurrenceDays.length > 0 ? { recurrenceDays: quickRecurrenceDays } : {}),
+                      });
                       setQuickTitle('');
                       setQuickMins(30);
                       setQuickStartDate('');
                       setQuickOwner('');
+                      setQuickIsRecurring(false);
+                      setQuickRecurrenceDays([1, 2, 3, 4, 5]);
                       setShowInput(false);
                       refetchProjects();
                     } catch (err) {
@@ -400,7 +456,7 @@ export default function InputPage() {
                   {quickLoading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <span>Add to Schedule</span>
+                    <span>{quickIsRecurring ? 'Add Recurring Task' : 'Add to Schedule'}</span>
                   )}
                 </button>
               </div>
