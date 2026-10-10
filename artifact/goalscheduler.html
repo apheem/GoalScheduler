@@ -1,0 +1,2039 @@
+<title>GoalScheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: phone-first single column (max 720px). Sticky header, plain list rows for moves,
+   cards only for goals/projects/crew, fixed five-slot tab bar with a center capture button. */
+:root {
+  --bg: #EDF1EB;        /* sage paper */
+  --surface: #FFFFFF;
+  --raise: #FFFFFF;     /* selected segment */
+  --sunk: #E1E8DF;
+  --ink: #13261F;       /* pine ink */
+  --ink-2: #47594F;
+  --ink-3: #6F8078;
+  --line: #D2DBD0;
+  --pine: #1E5A44;      /* primary */
+  --on-pine: #FFFFFF;
+  --gold: #E3A01A;      /* energy accent */
+  --gold-soft: #F8EBCB;
+  --on-gold: #2A1D04;
+  --good: #2F7D4F;
+  --warn: #9A620E;
+  --bad: #B3433A;
+  --scrim: rgba(10, 20, 15, .45);
+  --shadow: 0 1px 2px rgba(19,38,31,.06), 0 6px 18px rgba(19,38,31,.07);
+  --a-work: #2C79BC; --a-money: #2B9464; --a-body: #D05A36; --a-mind: #8767CC;
+  --a-people: #C94C82; --a-growth: #13969A; --a-fun: #CF9010; --a-impact: #788A2F;
+  --f-display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --f-body: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-card: 14px;
+  --r-ctl: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1411; --surface: #151F1A; --raise: #34463D; --sunk: #1C2822; --ink: #E3ECE7; --ink-2: #A6B6AE; --ink-3: #7F8F87;
+    --line: #2A3832; --pine: #5DC295; --on-pine: #08120D; --gold: #F0B437; --gold-soft: #33290F; --on-gold: #1D1403;
+    --good: #5DC295; --warn: #E7AA4A; --bad: #EF7D72; --scrim: rgba(0,0,0,.6); --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --a-work: #5BA2E0; --a-money: #4CC08A; --a-body: #EE7D58; --a-mind: #A78BEA;
+    --a-people: #E879A9; --a-growth: #3CC1C4; --a-fun: #E8B43A; --a-impact: #A3B455;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1411; --surface: #151F1A; --raise: #34463D; --sunk: #1C2822; --ink: #E3ECE7; --ink-2: #A6B6AE; --ink-3: #7F8F87;
+  --line: #2A3832; --pine: #5DC295; --on-pine: #08120D; --gold: #F0B437; --gold-soft: #33290F; --on-gold: #1D1403;
+  --good: #5DC295; --warn: #E7AA4A; --bad: #EF7D72; --scrim: rgba(0,0,0,.6); --shadow: 0 1px 2px rgba(0,0,0,.4);
+  --a-work: #5BA2E0; --a-money: #4CC08A; --a-body: #EE7D58; --a-mind: #A78BEA;
+  --a-people: #E879A9; --a-growth: #3CC1C4; --a-fun: #E8B43A; --a-impact: #A3B455;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--f-body); font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; text-align: inherit; }
+button:disabled { cursor: default; }
+input, select, textarea { font-size: 16px; }
+h1, h2, h3, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--ink-3); }
+
+.shell { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 0 calc(104px + env(safe-area-inset-bottom, 0px)); }
+.page { display: grid; gap: 4px; }
+
+/* Header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-inline: -16px; padding: 10px 16px; background: var(--bg); background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-weight: 800; font-size: 20px; letter-spacing: .02em; text-transform: uppercase; }
+.mark { width: 24px; height: 24px; border-radius: 7px; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; }
+.mark svg { width: 15px; height: 15px; stroke-width: 3.2; }
+.top-r { display: flex; align-items: center; gap: 8px; }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--sunk); color: var(--ink-2); white-space: nowrap; }
+.pill-gold { background: var(--gold-soft); color: var(--warn); }
+
+/* Type */
+.display { font-family: var(--f-display); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: .95; text-wrap: balance; }
+.h-xl { font-size: clamp(44px, 13vw, 64px); }
+.h-l { font-size: 36px; }
+.h-m { font-size: 24px; }
+.label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.hint { font-size: 13.5px; color: var(--ink-3); }
+.why { font-size: 14.5px; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Sections */
+.sec { display: grid; gap: 10px; padding-block: 18px 4px; }
+.sec-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.page-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px 10px; flex-wrap: wrap; }
+
+/* Banners & empties */
+.banner { border: 1px solid var(--line); background: var(--gold-soft); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin-block: 4px 8px; }
+.empty { padding: 18px; border: 1px dashed var(--line); border-radius: var(--r-card); color: var(--ink-2); display: grid; gap: 10px; justify-items: start; }
+.win { color: var(--good); font-weight: 700; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: var(--r-ctl); font-weight: 600; font-size: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; transition: background .15s, transform .1s; }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .5; }
+.btn-pri { background: var(--pine); border-color: var(--pine); color: var(--on-pine); }
+.btn-gold { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+.btn-ai { background: var(--gold-soft); border-color: transparent; color: var(--ink); }
+.btn-ai svg { color: var(--warn); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--pine); padding-inline: 4px; }
+.btn-danger { color: var(--bad); }
+.btn-sm { min-height: 32px; padding: 0 10px; font-size: 13px; border-radius: 8px; }
+.btn-block { width: 100%; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--ink-3); flex: none; }
+.icon-btn:hover { background: var(--sunk); color: var(--ink); }
+.back { display: inline-flex; align-items: center; gap: 2px; color: var(--pine); font-weight: 600; padding-block: 12px 4px; justify-self: start; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Chips & segmented */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips.scroller { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px; }
+.chips.scroller::-webkit-scrollbar { display: none; }
+.chip { flex: none; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); white-space: nowrap; }
+.chip .av { margin-left: -6px; }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--sunk); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg button { min-height: 36px; border-radius: 9px; font-weight: 700; font-size: 14px; color: var(--ink-2); text-align: center; }
+.seg button[aria-pressed="true"] { background: var(--raise); color: var(--ink); box-shadow: var(--shadow); }
+.seg .muted { font-weight: 600; }
+
+/* Areas */
+.area { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.area i { width: 9px; height: 9px; border-radius: 3px; background: var(--c); flex: none; }
+
+/* Avatars */
+.av { border-radius: 50%; flex: none; object-fit: cover; display: inline-grid; place-items: center; color: #fff; font-weight: 700; overflow: hidden; background: var(--ink-3); }
+
+/* Rows */
+.list { display: grid; }
+.row { display: flex; align-items: center; gap: 12px; padding-block: 9px; border-bottom: 1px solid var(--line); min-height: 54px; }
+.list > .row:last-child, .list > .carry:last-child .row { border-bottom: 0; }
+.row-main { flex: 1; min-width: 0; display: grid; gap: 2px; padding-block: 2px; }
+.row-title { font-weight: 500; overflow-wrap: anywhere; }
+.row.done .row-title { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.row-meta { font-size: 13px; color: var(--ink-3); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.ctx { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
+.ctx i { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.key { color: var(--gold); display: inline-flex; vertical-align: -2px; margin-right: 5px; }
+.late { color: var(--bad); font-weight: 600; }
+.warn { color: var(--warn); font-weight: 600; }
+.check { position: relative; flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink-3); display: grid; place-items: center; color: transparent; transition: background .15s, border-color .15s; }
+.check::before { content: ""; position: absolute; inset: -9px; }
+.check svg { width: 15px; height: 15px; stroke-width: 3.2; }
+.check.on { background: var(--pine); border-color: var(--pine); color: var(--on-pine); animation: pop .25s ease-out; }
+@keyframes pop { 50% { transform: scale(1.18); } }
+
+.adder { display: flex; align-items: center; gap: 12px; padding-block: 6px; min-height: 50px; }
+.adder-plus { width: 26px; display: grid; place-items: center; color: var(--ink-3); flex: none; }
+.adder input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 8px 0; outline: none; }
+.adder input::placeholder { color: var(--ink-3); }
+.adder:focus-within .adder-plus { color: var(--pine); }
+
+.carry { display: grid; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.carry .row { border-bottom: 0; }
+.carry-acts { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 38px; }
+.slip { padding-left: 38px; font-size: 13px; color: var(--warn); font-weight: 600; padding-bottom: 6px; }
+
+/* Forms */
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.input, .textarea, .select { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-ctl); padding: 10px 12px; min-height: 46px; }
+.textarea { resize: vertical; min-height: 84px; line-height: 1.45; display: block; }
+.input:focus, .textarea:focus, .select:focus { outline: 2px solid var(--pine); outline-offset: -1px; }
+.input::placeholder, .textarea::placeholder { color: var(--ink-3); }
+.select-inline { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; min-height: 32px; max-width: 100%; }
+.form { display: grid; gap: 14px; }
+.title-input { width: 100%; border: 0; background: transparent; padding: 2px 0; font-family: var(--f-display); font-weight: 800; font-size: clamp(34px, 9vw, 46px); text-transform: uppercase; line-height: 1; border-bottom: 2px solid transparent; }
+.title-input:focus { outline: none; border-bottom-color: var(--gold); }
+.why-input { background: transparent; }
+
+/* Today */
+.today-h { display: grid; gap: 8px; padding-block: 8px 6px; }
+.today-stats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 14px; color: var(--ink-2); }
+.today-stats .over { color: var(--bad); font-weight: 600; }
+.bar { display: block; height: 6px; border-radius: 99px; background: var(--sunk); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: calc(var(--p, 0) * 100%); background: var(--pine); border-radius: inherit; transition: width .35s ease; }
+.bar.gold > i { background: var(--gold); }
+.words { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.word { width: 100%; min-width: 0; font-family: var(--f-display); font-weight: 800; font-size: 26px; text-transform: uppercase; text-align: center; border: 0; border-bottom: 2px solid var(--line); background: transparent; padding: 6px 2px; border-radius: 0; }
+.word::placeholder { color: var(--ink-3); opacity: .45; }
+.word:focus { outline: none; border-bottom-color: var(--gold); }
+.big3 { display: grid; gap: 8px; }
+.slot { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 6px 8px 12px; min-height: 60px; width: 100%; }
+.slot-n { font-family: var(--f-display); font-weight: 800; font-size: 30px; color: var(--gold); width: 18px; text-align: center; line-height: 1; flex: none; }
+.slot.empty { border-style: dashed; background: transparent; color: var(--ink-3); font-weight: 600; }
+.slot.done .row-title { color: var(--ink-3); text-decoration: line-through; }
+.crew-strip { display: flex; gap: 8px; }
+.crew-chip { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.crew-chip-t { display: grid; line-height: 1.15; font-size: 12.5px; color: var(--ink-3); }
+.crew-chip-t b { color: var(--ink); font-size: 13.5px; }
+
+details.fold { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary .chev { transition: transform .2s; color: var(--ink-3); display: grid; }
+details.fold[open] > summary .chev { transform: rotate(90deg); }
+.fold-body { display: grid; gap: 12px; padding-bottom: 8px; }
+.grat { display: grid; gap: 8px; }
+.rate { display: grid; gap: 6px; padding-block: 8px; }
+.rate-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rate-top b { font-weight: 700; }
+.rate-q { font-size: 13px; color: var(--ink-3); }
+.dots5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.dots5 button { height: 38px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; color: var(--ink-2); text-align: center; font-variant-numeric: tabular-nums; }
+.dots5 button[aria-pressed="true"] { background: var(--pine); border-color: var(--pine); color: var(--on-pine); }
+.score-row { display: flex; align-items: baseline; gap: 8px; padding-block: 4px; }
+.score { font-size: 52px; color: var(--pine); }
+.score-mini { font-weight: 700; color: var(--pine); font-variant-numeric: tabular-nums; }
+
+/* Week */
+.nav-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 12px 2px; }
+.nav-title { font-family: var(--f-display); font-weight: 800; font-size: 26px; text-transform: uppercase; text-align: center; flex: 1; min-width: 0; }
+.nav-sub { display: flex; justify-content: center; gap: 12px; font-size: 13.5px; color: var(--ink-3); }
+.wday { display: grid; padding-block: 14px 0; }
+.wday-h { display: flex; align-items: baseline; gap: 10px; padding-bottom: 2px; border-bottom: 2px solid var(--ink); }
+.wday-name { font-family: var(--f-display); font-weight: 800; font-size: 24px; text-transform: uppercase; }
+.wday.is-today .wday-h { border-bottom-color: var(--pine); }
+.wday.is-today .wday-name { color: var(--pine); }
+.wday.is-past { opacity: .78; }
+.wday-load { margin-left: auto; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.wday-load.over { color: var(--bad); font-weight: 700; }
+.focus { display: grid; gap: 8px; }
+.fcard { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.fcard-main { flex: 1; min-width: 0; display: grid; gap: 4px; text-align: left; }
+.fcard-t { font-weight: 600; overflow-wrap: anywhere; }
+.daypick { display: flex; gap: 4px; padding-left: 38px; padding-bottom: 8px; flex-wrap: wrap; }
+.daypick button { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; }
+.daypick button.today { border-color: var(--pine); color: var(--pine); }
+.ready .row { border-bottom: 0; }
+.ready > div { border-bottom: 1px solid var(--line); }
+
+/* Month */
+.mgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mhead { font-size: 11px; font-weight: 700; color: var(--ink-3); text-align: center; letter-spacing: .06em; padding-bottom: 2px; }
+.mcell { min-height: 54px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); padding: 4px 5px; display: grid; grid-template-rows: auto 1fr; gap: 2px; text-align: left; min-width: 0; font-variant-numeric: tabular-nums; }
+.mcell.out { opacity: .38; }
+.mcell.today { border-color: var(--pine); box-shadow: inset 0 0 0 1px var(--pine); }
+.mcell[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.mcell-top { display: flex; justify-content: space-between; align-items: center; gap: 2px; }
+.mnum { font-size: 13px; font-weight: 700; }
+.mdue { width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); flex: none; }
+.mdots { display: flex; flex-wrap: wrap; gap: 2px; align-content: end; }
+.mdots i { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); opacity: .7; }
+.mdots i.d { background: var(--pine); opacity: 1; }
+.mcell[aria-pressed="true"] .mdots i { background: var(--bg); }
+.mscore { font-size: 10px; color: var(--ink-3); font-weight: 700; }
+.mcell[aria-pressed="true"] .mscore { color: var(--bg); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-3); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--pine); display: inline-block; }
+.legend i.o { background: var(--ink-3); }
+.legend i.g { background: var(--gold); border-radius: 0; transform: rotate(45deg); }
+
+/* Year */
+.theme-input { width: 100%; border: 0; border-bottom: 2px solid var(--line); background: transparent; font-family: var(--f-display); font-weight: 800; font-size: clamp(32px, 9vw, 44px); text-transform: uppercase; padding: 4px 0; border-radius: 0; }
+.theme-input:focus { outline: none; border-bottom-color: var(--gold); }
+.theme-input::placeholder { color: var(--ink-3); opacity: .45; }
+.areas { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.acard { display: grid; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; border-top: 3px solid var(--c); }
+.acard-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.acard .textarea { min-height: 64px; border-color: transparent; background: var(--sunk); padding: 8px 10px; font-size: 15px; }
+.tl { display: grid; }
+.tl-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding-block: 8px; border-bottom: 1px solid var(--line); align-items: start; }
+.tl-m { font-family: var(--f-display); font-weight: 800; font-size: 20px; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.tl-row.now .tl-m { color: var(--pine); }
+.tl-goals { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
+.gchip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 600; max-width: 100%; text-align: left; }
+.gchip i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.gchip.done { color: var(--ink-3); text-decoration: line-through; }
+
+/* Projects */
+.pgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.pcard { display: grid; gap: 10px; align-content: start; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 14px; transition: border-color .15s, transform .1s; }
+.pcard:hover { border-color: var(--ink-3); }
+.pcard:active { transform: scale(.99); }
+.pcard-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pcard-title { display: block; font-family: var(--f-display); font-weight: 800; font-size: 30px; text-transform: uppercase; line-height: .95; overflow-wrap: anywhere; }
+.pcard-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ink-3); }
+.pcard-next { font-size: 13.5px; color: var(--ink-2); display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.pcard-next span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.loose { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-2); font-weight: 600; width: 100%; margin-top: 10px; }
+.pd-h { display: grid; gap: 10px; padding-block: 6px 4px; }
+.pd-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pd-owner { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-3); }
+.pd-owner .select { min-height: 36px; padding: 4px 10px; width: auto; font-size: 14px; }
+.pd-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-block: 14px 0; }
+.pd-stats > div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; }
+.stat { font-size: 34px; }
+.stat small { font-size: 20px; color: var(--ink-3); }
+.glist { display: grid; gap: 10px; }
+.gcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+.gcard.muted { opacity: .75; }
+.gcard-h { display: flex; gap: 12px; align-items: flex-start; padding: 12px 12px 12px 14px; width: 100%; text-align: left; }
+.gcard-t { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.gtitle { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; line-height: 1.3; }
+.kind { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.chev { color: var(--ink-3); transition: transform .2s; display: grid; padding-top: 8px; }
+.chev.open { transform: rotate(90deg); }
+.ring { width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: conic-gradient(var(--pine) calc(var(--p, 0) * 1turn), var(--sunk) 0); }
+.ring span { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gcard-b { padding: 4px 14px 14px; display: grid; gap: 10px; border-top: 1px solid var(--line); }
+.purpose { display: grid; gap: 4px; padding-top: 8px; }
+.danger { border-top: 1px solid var(--line); margin-top: 20px; }
+
+/* Crew */
+.crew { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 14px; }
+.ccard { display: grid; gap: 10px; align-content: start; }
+.ccard-h { display: flex; align-items: center; gap: 10px; }
+.ccard-h > div:first-of-type { flex: 1; min-width: 0; }
+.ccard-name { font-weight: 700; overflow-wrap: anywhere; }
+.ccard-score { text-align: right; line-height: 1; }
+.ccard-score .display { font-size: 32px; color: var(--pine); }
+.ccard-words { font-size: 22px; color: var(--ink); overflow-wrap: anywhere; }
+.ccard-big { display: grid; gap: 6px; font-size: 14px; }
+.ccard-big li { display: flex; gap: 8px; align-items: flex-start; overflow-wrap: anywhere; }
+.ccard-big li.done { color: var(--ink-3); text-decoration: line-through; }
+.mini-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink-3); flex: none; display: grid; place-items: center; margin-top: 1px; }
+.mini-check.on { background: var(--pine); border-color: var(--pine); color: var(--on-pine); }
+.mini-check svg { width: 11px; height: 11px; stroke-width: 3.5; }
+.ccard-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-3); }
+.ccard-stats b { color: var(--ink); }
+.method { display: grid; gap: 14px; }
+.method h3 { font-size: 15px; font-weight: 700; }
+.method p { color: var(--ink-2); font-size: 14.5px; max-width: 62ch; }
+.habits { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.habits li { background: var(--sunk); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; color: var(--ink-2); }
+.habits b { display: block; color: var(--ink); }
+
+/* AI proposals */
+.props { display: grid; gap: 10px; }
+.prop { display: grid; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.prop-h { display: flex; gap: 10px; align-items: flex-start; }
+.prop-h > div { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.prop ul { display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+.prop li { display: flex; gap: 6px; align-items: baseline; }
+.prop li .num { margin-left: auto; color: var(--ink-3); font-size: 12.5px; flex: none; }
+.tick { display: flex; gap: 10px; align-items: flex-start; padding-block: 8px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.tick input { width: 20px; height: 20px; accent-color: var(--pine); flex: none; margin-top: 1px; }
+.tick > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.thinking { display: flex; align-items: center; gap: 10px; color: var(--ink-2); padding-block: 10px; }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--gold); animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.err { color: var(--bad); font-size: 14px; }
+.context-list { display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); padding: 10px 12px; background: var(--sunk); border-radius: 10px; }
+
+/* Tab bar */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabbar-in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; }
+.tab { display: grid; justify-items: center; gap: 2px; padding: 9px 0 10px; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+.tab[aria-current="page"] { color: var(--ink); }
+.tab[aria-current="page"] svg { color: var(--pine); }
+.fab-wrap { display: grid; justify-items: center; padding-bottom: 10px; }
+.fab { width: 54px; height: 54px; border-radius: 17px; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; transform: translateY(-12px); box-shadow: 0 6px 18px rgba(0,0,0,.18); transition: transform .12s; }
+.fab:active { transform: translateY(-12px) scale(.94); }
+.fab svg { stroke-width: 2.6; }
+
+/* Sheets */
+.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); animation: fade .15s ease-out; }
+.sheet { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 720px; max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border-radius: 20px 20px 0 0; animation: up .22s ease-out; outline: none; }
+.sheet-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.sheet.has-foot .sheet-scroll { padding-bottom: 16px; }
+.sheet-h { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px 10px; }
+.sheet-h::before { content: ""; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line); }
+.sheet-body { display: grid; gap: 14px; }
+.sheet-foot { flex: none; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+.sheet-foot .btn { flex: 1; min-height: 46px; }
+@keyframes up { from { transform: translateY(24px); opacity: 0; } }
+@keyframes fade { from { opacity: 0; } }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 500; max-width: calc(100% - 32px); width: max-content; box-shadow: var(--shadow); animation: up .2s ease-out; }
+.boot { padding-block: 40px; color: var(--ink-3); }
+
+@media (min-width: 640px) {
+  .sheet { bottom: auto; top: 6vh; border-radius: 20px; max-height: 88vh; box-shadow: var(--shadow); width: calc(100% - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div id="app"><div class="shell"><div class="boot">Loading GoalScheduler…</div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/preact/10.24.3/preact.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/preact/10.24.3/hooks.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+(function () {
+'use strict';
+const { h, render } = preact;
+const { useState, useEffect, useRef } = preactHooks;
+const html = htm.bind(h);
+
+/* ───────────── Constants ───────────── */
+
+const AREAS = [
+  { key: 'work',   label: 'Career & Business' },
+  { key: 'money',  label: 'Money' },
+  { key: 'body',   label: 'Body & Energy' },
+  { key: 'mind',   label: 'Mind & Emotions' },
+  { key: 'people', label: 'Relationships' },
+  { key: 'growth', label: 'Growth & Learning' },
+  { key: 'fun',    label: 'Fun & Adventure' },
+  { key: 'impact', label: 'Contribution & Spirit' },
+];
+const AREA = Object.fromEntries(AREAS.map((a) => [a.key, a]));
+const areaColor = (k) => `var(--a-${AREA[k] ? k : 'work'})`;
+
+// Brendon Burchard's six high performance habits, as nightly self-ratings.
+const HABITS = [
+  { key: 'clarity',      label: 'Clarity',      q: 'Did I know what I wanted today, and why?' },
+  { key: 'energy',       label: 'Energy',       q: 'Did I protect my energy: sleep, food, movement, breaks?' },
+  { key: 'necessity',    label: 'Necessity',    q: 'Did I act like it mattered, because it does?' },
+  { key: 'productivity', label: 'Productivity', q: 'Did I move the outputs that matter most?' },
+  { key: 'influence',    label: 'Influence',    q: 'Did I lift someone up or lead by example?' },
+  { key: 'courage',      label: 'Courage',      q: 'Did I do the hard or scary thing?' },
+];
+const RO_MSG = 'You can view this planner but not change it. Ask the owner to invite you as an Editor.';
+const MINUTE_CHOICES = [15, 30, 45, 60, 90, 120];
+
+/* ───────────── Dates (local, ISO yyyy-mm-dd) ───────────── */
+
+const pad = (n) => String(n).padStart(2, '0');
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const addMonths = (s, n) => { const d = parse(s); d.setDate(1); d.setMonth(d.getMonth() + n); return iso(d); };
+const todayIso = () => iso(new Date());
+const weekStart = (s) => { const d = parse(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d); };
+const dayDiff = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const fmt = (s, o) => parse(s).toLocaleDateString(undefined, o);
+const longDate = (s) => fmt(s, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+const dayOfYear = (s) => dayDiff(s.slice(0, 4) + '-01-01', s) + 1;
+const daysInYear = (y) => dayDiff(`${y}-01-01`, `${y + 1}-01-01`);
+function isoWeek(s) {
+  const d = parse(s);
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const wd = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - wd);
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+function relDay(s) {
+  const n = dayDiff(todayIso(), s);
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Tomorrow';
+  if (n === -1) return 'Yesterday';
+  if (n > 1 && n < 7) return fmt(s, { weekday: 'long' });
+  return fmt(s, { month: 'short', day: 'numeric' });
+}
+function dueText(due) {
+  if (!due) return '';
+  const n = dayDiff(todayIso(), due);
+  if (n === 0) return 'Due today';
+  if (n === 1) return 'Due tomorrow';
+  if (n < 0) return `${-n} day${n === -1 ? '' : 's'} late`;
+  if (n <= 14) return `Due in ${n} days`;
+  const sameYear = due.slice(0, 4) === todayIso().slice(0, 4);
+  return 'Due ' + fmt(due, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+const dueCls = (g) => (g.status === 'active' && g.due && g.due < todayIso() ? 'late' : '');
+const mins = (m) => { m = m || 0; return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`; };
+const clampMin = (m) => Math.max(5, Math.min(240, Math.round(Number(m) || 30)));
+const str = (v, n = 200) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function parseQuick(text) {
+  let title = text.trim();
+  let minutes = 30;
+  const m = title.match(/\s+(\d{1,3})\s*(m|min|mins|minutes|h|hr|hrs|hours)$/i);
+  if (m) { const n = +m[1]; minutes = /^h/i.test(m[2]) ? n * 60 : n; title = title.slice(0, m.index).trim(); }
+  return { title: title.slice(0, 160), minutes: clampMin(minutes) };
+}
+
+/* ───────────── Store ───────────── */
+
+const S = { mode: 'loading', me: null, readOnly: false, canWrite: null, user: null, ai: null, profiles: {} };
+const UI = { tab: 'today', plan: 'week', who: 'me', projectId: null, sheet: null, toast: null, weekOf: null, monthOf: null, year: null, selDay: null };
+try { const saved = JSON.parse(localStorage.getItem('gs.ui') || '{}'); if (saved.tab) UI.tab = saved.tab; if (saved.plan) UI.plan = saved.plan; } catch (e) { /* storage unavailable */ }
+
+const subs = new Set();
+let queued = false;
+function emit() { if (queued) return; queued = true; Promise.resolve().then(() => { queued = false; subs.forEach((f) => f()); }); }
+function ui(patch) {
+  if (patch.tab && patch.tab !== UI.tab) window.scrollTo(0, 0);
+  if ('projectId' in patch && patch.projectId !== UI.projectId) window.scrollTo(0, 0);
+  Object.assign(UI, patch); emit();
+}
+let sheetSeq = 0;
+function openSheet(type, props) { UI.sheet = { type, props: props || {}, key: ++sheetSeq }; emit(); }
+function closeSheet() { UI.sheet = null; emit(); }
+let toastTimer;
+function toast(msg) { UI.toast = { msg }; emit(); clearTimeout(toastTimer); toastTimer = setTimeout(() => { UI.toast = null; emit(); }, 3400); }
+
+// Server state per collection path, plus an overlay of this viewer's unconfirmed writes.
+const RAW = new Map(), VIEW = new Map(), LOADED = new Set();
+const overlay = new Map();
+const EMPTY = new Map();
+const C = (col) => VIEW.get(col) || EMPTY;
+const logCol = (uid) => `people/${uid}/log`;
+const getLog = (uid, key) => (uid ? C(logCol(uid)).get(key) : undefined);
+
+function rebuild(col) {
+  const m = new Map(RAW.get(col) || []);
+  for (const [path, o] of overlay) {
+    const i = path.lastIndexOf('/');
+    if (path.slice(0, i) !== col) continue;
+    const id = path.slice(i + 1);
+    if (o.del) m.delete(id); else m.set(id, { ...(o.replace ? {} : m.get(id) || {}), ...o.data, id });
+  }
+  VIEW.set(col, m);
+}
+
+/* ───────────── Database ───────────── */
+
+let DB = null;
+let Q = Promise.resolve();
+const UNSUB = new Map();
+
+function strip(d) { const o = { ...(d || {}) }; delete o.id; return o; }
+
+function write(path, kind, data) {
+  if (S.readOnly) { toast(RO_MSG); return false; }
+  const col = path.slice(0, path.lastIndexOf('/'));
+  const o = overlay.get(path) || { data: {}, v: 0 };
+  o.v++;
+  if (kind === 'delete') { o.del = true; o.data = {}; }
+  else { o.del = false; if (kind === 'set') { o.replace = true; o.data = { ...data }; } else Object.assign(o.data, data); }
+  overlay.set(path, o);
+  const v = o.v;
+  rebuild(col); emit();
+  Q = Q.then(async () => {
+    const ref = DB.doc(path);
+    const run = () => (kind === 'delete' ? ref.delete() : kind === 'set' ? ref.set(data) : ref.update(data));
+    try {
+      await run().catch((e) => (e && e.code === 'unavailable' ? sleep(500 + Math.random() * 700).then(run) : Promise.reject(e)));
+    } catch (e) { onWriteError(e); }
+    finally { const cur = overlay.get(path); if (cur && cur.v === v) overlay.delete(path); rebuild(col); emit(); }
+  });
+  return true;
+}
+function onWriteError(e) {
+  const code = e && e.code;
+  if (code === 'invalid_argument' && S.canWrite !== true) { S.readOnly = true; toast(RO_MSG); }
+  else if (code === 'invalid_argument') toast('Someone else changed or removed that item. Your edit was skipped.');
+  else if (code === 'quota_exceeded') toast('The planner is full. Delete finished projects to make room.');
+  else if (code === 'revoked') { S.readOnly = true; toast('Your access to this planner changed.'); }
+  else if (code === 'resource_exhausted') toast('Saving too fast. Give it a second and try again.');
+  else toast('Couldn’t save that change. Check your connection and try again.');
+  emit();
+}
+
+function createDoc(col, data) {
+  const id = newId();
+  const full = { ...data, createdAt: Date.now(), createdBy: S.me };
+  return write(`${col}/${id}`, 'set', full) ? id : null;
+}
+const patchDoc = (col, id, patch) => write(`${col}/${id}`, 'update', { ...patch, updatedAt: Date.now() });
+const deleteDoc = (col, id) => write(`${col}/${id}`, 'delete');
+function saveLog(key, patch) {
+  if (!S.me) return;
+  const next = { ...strip(getLog(S.me, key)), ...patch, updatedAt: Date.now() };
+  write(`${logCol(S.me)}/${key}`, 'set', next);
+}
+function savePerson(patch) {
+  if (!S.me) return;
+  write(`people/${S.me}`, 'set', { ...strip(C('people').get(S.me)), ...patch });
+}
+
+let registered = false;
+function listen(col) {
+  if (UNSUB.has(col)) return;
+  UNSUB.set(col, DB.collection(col).onSnapshot((snap) => {
+    const m = new Map();
+    for (const d of snap.docs) m.set(d.id, { ...d.data(), id: d.id });
+    RAW.set(col, m); rebuild(col); LOADED.add(col);
+    if (col === 'people') onPeople(snap);
+    emit();
+  }, (e) => {
+    UNSUB.delete(col);
+    if (e && e.code === 'revoked') { S.readOnly = true; emit(); return; }
+    if (e && e.code === 'unavailable') setTimeout(() => listen(col), 3000);
+  }));
+}
+function onPeople(snap) {
+  for (const id of crewIds()) listen(logCol(id));
+  const fresh = !(snap.metadata && snap.metadata.fromCache);
+  if (fresh && S.me && !S.readOnly && !registered && !RAW.get('people').has(S.me)) {
+    registered = true;
+    write(`people/${S.me}`, 'set', { joinedAt: Date.now(), capacity: 240 });
+  }
+}
+
+// In-memory stand-in with the same calls, used when the page runs outside Claude.
+function memoryDb() {
+  const docs = new Map();
+  const ls = new Set();
+  const colOf = (p) => p.slice(0, p.lastIndexOf('/'));
+  const snapOf = (col) => {
+    const out = [];
+    for (const [p, d] of docs) if (colOf(p) === col) out.push({ id: p.slice(p.lastIndexOf('/') + 1), exists: true, data: () => d });
+    return { docs: out, size: out.length, empty: !out.length, metadata: { fromCache: false, hasPendingWrites: false } };
+  };
+  const notify = (p) => { for (const l of ls) if (l.col === colOf(p)) l.fn(snapOf(l.col)); };
+  const ref = (p) => ({
+    id: p.slice(p.lastIndexOf('/') + 1), path: p,
+    get: async () => ({ exists: docs.has(p), data: () => docs.get(p) }),
+    set: async (d) => { docs.set(p, JSON.parse(JSON.stringify(d))); notify(p); },
+    update: async (d) => { if (!docs.has(p)) throw { code: 'invalid_argument', message: 'missing' }; docs.set(p, { ...docs.get(p), ...JSON.parse(JSON.stringify(d)) }); notify(p); },
+    delete: async () => { docs.delete(p); notify(p); },
+  });
+  return {
+    doc: ref,
+    collection: (col) => ({
+      path: col, doc: (id) => ref(`${col}/${id || newId()}`),
+      onSnapshot(fn) { const l = { col, fn }; ls.add(l); setTimeout(() => fn(snapOf(col)), 0); return () => ls.delete(l); },
+    }),
+  };
+}
+
+/* ───────────── Derived data ───────────── */
+
+const actions = () => [...C('actions').values()];
+const goals = () => [...C('goals').values()];
+const projects = () => [...C('projects').values()];
+const byOrder = (a, b) => (a.order || a.createdAt || 0) - (b.order || b.createdAt || 0);
+const byDone = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (b.key ? 1 : 0) - (a.key ? 1 : 0) || byOrder(a, b);
+const goalActions = (gid) => actions().filter((a) => a.goalId === gid).sort(byOrder);
+const projectGoals = (pid) => goals().filter((g) => g.projectId === pid).sort(byOrder);
+const projectOf = (a) => { const g = a.goalId && C('goals').get(a.goalId); return C('projects').get(a.projectId || (g && g.projectId)); };
+const progress = (list) => { const t = list.length, d = list.filter((a) => a.done).length; return { t, d, pct: t ? d / t : 0 }; };
+const capOf = (uid) => (C('people').get(uid) || {}).capacity || 240;
+function crewIds() {
+  const ids = [...C('people').values()].sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)).map((p) => p.id);
+  const out = S.me ? [S.me] : [];
+  for (const id of ids) if (!out.includes(id)) out.push(id);
+  return out;
+}
+const whoId = () => (UI.who === 'all' ? null : UI.who === 'me' ? S.me : UI.who);
+const nameOf = (uid) => { const p = S.profiles[uid]; return (p && p.name) || (uid === S.me ? 'You' : 'Crew member'); };
+const firstName = (uid) => (uid === S.me ? 'You' : nameOf(uid).split(' ')[0]);
+function projectVisible(p, uid) {
+  if (!uid || !p.ownerId || p.ownerId === uid) return true;
+  return goals().some((g) => g.projectId === p.id && g.ownerId === uid) || actions().some((a) => a.projectId === p.id && a.ownerId === uid);
+}
+function groupBy(list, f) { const m = new Map(); for (const x of list) { const k = f(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); } return m; }
+function dayHasEntry(uid, d) {
+  const x = getLog(uid, 'd-' + d);
+  return !!x && ((x.big3 || []).some(Boolean) || (x.words || []).some(Boolean) || Object.keys(x.ratings || {}).length > 0 || (x.grateful || []).some(Boolean));
+}
+function streak(uid) {
+  let d = todayIso(); if (!dayHasEntry(uid, d)) d = addDays(d, -1);
+  let n = 0; while (n < 400 && dayHasEntry(uid, d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+const scoreOf = (log) => HABITS.reduce((s, x) => s + ((log && log.ratings && log.ratings[x.key]) || 0), 0);
+
+/* ───────────── Mutations ───────────── */
+
+function newAction(f) {
+  const goal = f.goalId ? C('goals').get(f.goalId) : null;
+  return createDoc('actions', {
+    title: f.title, minutes: clampMin(f.minutes), day: f.day || null,
+    goalId: f.goalId || null, projectId: f.projectId || (goal && goal.projectId) || null,
+    ownerId: f.ownerId || S.me, key: !!f.key, done: false, doneAt: null, carried: 0, notes: '', order: Date.now() + Math.random(),
+  });
+}
+const toggleDone = (a) => patchDoc('actions', a.id, { done: !a.done, doneAt: a.done ? null : Date.now() });
+const moveTo = (a, day) => patchDoc('actions', a.id, { day, carried: (a.carried || 0) + (day ? 1 : 0) });
+function setBig(i, id) {
+  const t = todayIso(), key = 'd-' + t;
+  const cur = (getLog(S.me, key) || {}).big3 || [];
+  const arr = [0, 1, 2].map((j) => (j === i ? id : cur[j] || null));
+  if (id) {
+    for (let j = 0; j < 3; j++) if (j !== i && arr[j] === id) arr[j] = null;
+    const a = C('actions').get(id);
+    if (a && a.day !== t) patchDoc('actions', id, { day: t });
+  }
+  saveLog(key, { big3: arr, date: t });
+}
+function deleteGoal(id) {
+  for (const a of goalActions(id)) deleteDoc('actions', a.id);
+  deleteDoc('goals', id);
+}
+function deleteProject(id) {
+  for (const a of actions().filter((x) => x.projectId === id)) deleteDoc('actions', a.id);
+  for (const g of projectGoals(id)) deleteDoc('goals', g.id);
+  deleteDoc('projects', id);
+  ui({ projectId: null });
+  toast('Project deleted');
+}
+function addGoalWithActions(projectId, s) {
+  const gid = createDoc('goals', {
+    projectId, kind: s.kind === 'mini' ? 'mini' : 'goal', title: s.title, why: s.why || '',
+    due: s.due || null, ownerId: s.ownerId || S.me, status: 'active', doneAt: null, order: Date.now(),
+  });
+  if (gid) (s.actions || []).forEach((a) => newAction({ ...a, goalId: gid, projectId }));
+  return gid;
+}
+
+/* ───────────── Claude ───────────── */
+
+const PRINCIPLES = `You are the planning coach inside GoalScheduler, a planner that a group of friends share. Coach with two frameworks:
+- Tony Robbins' Rapid Planning Method (RPM): a goal is a Result (a specific, checkable outcome), a Purpose (the emotional reason it is a must), and a Massive Action Plan (the concrete actions). Chunk related actions under one result, and mark the vital few actions that drive most of the result.
+- Brendon Burchard's High Performance Habits: seek clarity, generate energy, raise necessity, increase productivity by naming the major moves, develop influence, demonstrate courage.
+Write plainly and specifically, in the person's own vocabulary. Results are concrete ("Book 20 color appointments a week by March 1", not "Grow the salon"). Actions start with a verb and fit in one sitting (5 to 120 minutes).`;
+
+let aiOff = false;
+const aiReady = () => !!S.ai && !aiOff && !S.readOnly;
+async function ask(prompt, opts) {
+  if (!S.ai || aiOff) throw { code: 'not_granted' };
+  try { return await S.ai.json(prompt, opts || {}); }
+  catch (e) {
+    if (e && ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(e.code)) { aiOff = true; emit(); }
+    throw e;
+  }
+}
+function aiError(e) {
+  switch (e && e.code) {
+    case 'cancelled': return '';
+    case 'not_granted': return 'Claude is off for this page. You can allow it from the page’s Permissions menu.';
+    case 'rate_limited': return 'Claude is busy or you hit a usage limit. Try again in a minute.';
+    case 'invalid_json': return 'Claude’s answer came back in the wrong shape. Try again.';
+    case 'session_expired': return 'Sign in to Claude again, then retry.';
+    case 'refused': return 'Claude couldn’t help with that one. Try rewording it.';
+    case 'prompt_too_large': return 'There’s too much here for one request. Try a smaller piece.';
+    default: return 'Couldn’t reach Claude. Try again.';
+  }
+}
+function projectContext(p) {
+  const lines = projectGoals(p.id).map((g) => {
+    const acts = goalActions(g.id);
+    const done = acts.filter((a) => a.done).length;
+    let s = `- [${g.status}] ${g.kind === 'mini' ? 'Mini-project' : 'Goal'}: "${g.title}"${g.due ? ` (due ${g.due})` : ''}`;
+    if (g.why) s += `\n  Purpose: ${g.why}`;
+    if (acts.length) s += `\n  Actions (${done}/${acts.length} done): ${acts.slice(0, 12).map((a) => (a.done ? '[x] ' : '[ ] ') + a.title).join('; ')}`;
+    return s;
+  });
+  const loose = actions().filter((a) => a.projectId === p.id && !a.goalId);
+  return `Project: "${p.title}" (life area: ${(AREA[p.area] || AREA.work).label})
+Purpose / vision: ${p.why || '(not written yet)'}
+Goals and mini-projects so far:
+${lines.join('\n') || '(none yet)'}${loose.length ? `\nLoose actions in this project: ${loose.slice(0, 15).map((a) => a.title).join('; ')}` : ''}`;
+}
+const cleanActions = (list, max = 8) => (Array.isArray(list) ? list : []).slice(0, max)
+  .map((a) => ({ title: str(a && a.title, 160), minutes: clampMin(a && a.minutes), key: !!(a && a.key), sel: true }))
+  .filter((a) => a.title);
+
+async function suggestGoals(p, steer, fresh, signal) {
+  const prompt = `${PRINCIPLES}
+
+Today is ${longDate(todayIso())}.
+
+${projectContext(p)}
+${steer ? `\nWhat the person wants next: ${steer}\n` : ''}
+Suggest 3 new goals or mini-projects for this project that build on what is already here: take the next logical step after finished goals, fill obvious gaps, and stay true to the project's purpose and to the way its goals are written. Do not repeat or reword existing goals. Use "mini" for a multi-step piece of work with its own scope, and "goal" for an outcome to hit.
+
+Reply with only JSON in this shape:
+{"suggestions":[{"kind":"goal","title":"Result, specific and measurable","why":"Purpose in one or two sentences, in the person's voice","dueInDays":30,"actions":[{"title":"Verb-first action","minutes":30,"key":true}]}]}
+Give each suggestion 3 to 6 actions and mark 1 or 2 of them as key.`;
+  const opts = { signal };
+  if (fresh) opts.cache = false;
+  const r = await ask(prompt, opts);
+  const list = Array.isArray(r && r.suggestions) ? r.suggestions : Array.isArray(r) ? r : [];
+  return list.slice(0, 5).map((s) => ({
+    kind: s && s.kind === 'mini' ? 'mini' : 'goal',
+    title: str(s && s.title, 160),
+    why: str(s && s.why, 600),
+    due: addDays(todayIso(), Math.max(1, Math.min(730, Math.round(Number(s && s.dueInDays) || 30)))),
+    actions: cleanActions(s && s.actions),
+  })).filter((s) => s.title);
+}
+async function planMoves(g, fresh, signal) {
+  const p = C('projects').get(g.projectId);
+  const prompt = `${PRINCIPLES}
+
+Today is ${longDate(todayIso())}.
+
+${p ? projectContext(p) : ''}
+
+Write the Massive Action Plan for this ${g.kind === 'mini' ? 'mini-project' : 'goal'}: "${g.title}"${g.due ? ` (due ${g.due})` : ''}.
+Purpose: ${g.why || '(not written)'}
+Actions already planned: ${goalActions(g.id).map((a) => a.title).join('; ') || '(none)'}
+
+List 4 to 8 new actions that would get this result, in a sensible order, without repeating existing actions. Mark the 1 or 2 vital ones as key.
+
+Reply with only JSON: {"actions":[{"title":"Verb-first action","minutes":30,"key":false}]}`;
+  const opts = { signal };
+  if (fresh) opts.cache = false;
+  const r = await ask(prompt, opts);
+  return cleanActions(r && r.actions);
+}
+async function breakDown(a, signal) {
+  const g = a.goalId && C('goals').get(a.goalId);
+  const p = projectOf(a);
+  const prompt = `${PRINCIPLES}
+
+This action keeps slipping (moved ${a.carried || 0} times): "${a.title}" (${a.minutes || 30} min)${g ? `, part of the goal "${g.title}"` : ''}${p ? ` in the project "${p.title}"` : ''}.
+Break it into 2 to 4 smaller, concrete steps of 10 to 45 minutes each, so the first one is easy to start today.
+
+Reply with only JSON: {"actions":[{"title":"Verb-first step","minutes":20}]}`;
+  const r = await ask(prompt, { signal, cache: false });
+  return cleanActions(r && r.actions, 4);
+}
+function normDay(v) {
+  const t = todayIso();
+  if (v === 'today') return t;
+  if (v === 'tomorrow') return addDays(t, 1);
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+async function sortDump(text, signal) {
+  const t = todayIso();
+  const ps = projects().filter((p) => (p.status || 'active') === 'active').slice(0, 30);
+  const ctx = ps.map((p) => {
+    const gs = projectGoals(p.id).filter((g) => g.status === 'active').slice(0, 12);
+    return `- Project id=${p.id} "${p.title}" (${(AREA[p.area] || AREA.work).label})${gs.map((g) => `\n  - Goal id=${g.id} "${g.title}"`).join('')}`;
+  }).join('\n');
+  const prompt = `${PRINCIPLES}
+
+Today is ${fmt(t, { weekday: 'long' })} ${t}.
+
+The person's active projects and goals:
+${ctx || '(none yet)'}
+
+Their brain dump:
+"""
+${text.slice(0, 6000)}
+"""
+
+Chunk it RPM-style. For each distinct item in the dump, decide where it belongs:
+- an action under an existing goal (set goalId),
+- an action under an existing project with no matching goal (set projectId),
+- a new goal under an existing project (type "goal", set projectId, include its actions),
+- or a new goal inside a new project (type "goal", set newProject with a title and area).
+Small one-off errands can be actions with no goalId or projectId.
+Set "day" from the dump's own timing words as an ISO date (YYYY-MM-DD), or null when no timing was given.
+Area must be one of: ${AREAS.map((a) => a.key).join(', ')}.
+
+Reply with only JSON:
+{"items":[{"type":"action","title":"...","minutes":30,"day":null,"goalId":null,"projectId":null,"newProject":null,"why":null,"actions":[]}]}`;
+  const r = await ask(prompt, { signal, cache: false });
+  const items = Array.isArray(r && r.items) ? r.items : [];
+  return items.slice(0, 40).map((it) => {
+    const goalId = it && C('goals').has(it.goalId) ? it.goalId : null;
+    const projectId = it && C('projects').has(it.projectId) ? it.projectId : goalId ? C('goals').get(goalId).projectId : null;
+    const np = !goalId && !projectId && it && it.newProject && str(it.newProject.title, 80)
+      ? { title: str(it.newProject.title, 80), area: AREA[it.newProject.area] ? it.newProject.area : 'work' } : null;
+    const type = it && it.type === 'goal' && (projectId || np) ? 'goal' : 'action';
+    return {
+      sel: true, type, title: str(it && it.title, 160), minutes: clampMin(it && it.minutes), day: normDay(it && it.day),
+      goalId: type === 'action' ? goalId : null, projectId, newProject: np, why: str(it && it.why, 500),
+      actions: type === 'goal' ? cleanActions(it && it.actions) : [],
+    };
+  }).filter((x) => x.title);
+}
+
+/* ───────────── Profiles ───────────── */
+
+let profBusy = false;
+async function refreshProfiles() {
+  if (!S.user || profBusy) return;
+  const ids = new Set(crewIds());
+  for (const col of ['projects', 'goals', 'actions']) for (const x of C(col).values()) if (x.ownerId) ids.add(x.ownerId);
+  const list = [...ids].filter(Boolean);
+  if (!list.length) return;
+  profBusy = true;
+  try {
+    const ps = await S.user.profiles(list);
+    let changed = false;
+    for (const id of list) {
+      const p = ps && ps[id];
+      if (!p) continue;
+      const old = S.profiles[id];
+      if (!old || old.name !== p.name || old.avatarUrl !== p.avatarUrl || old.color !== p.color) {
+        S.profiles[id] = { name: p.name, avatarUrl: p.avatarUrl, color: p.color }; changed = true;
+      }
+    }
+    if (changed) emit();
+  } catch (e) { /* profiles never reject by contract */ }
+  finally { profBusy = false; }
+}
+
+/* ───────────── Small components ───────────── */
+
+const PATHS = {
+  check: 'M5 12.5l4.2 4.2L19 7',
+  plus: 'M12 5v14M5 12h14',
+  x: 'M6 6l12 12M18 6L6 18',
+  chevL: 'M15 5l-7 7 7 7',
+  chevR: 'M9 5l7 7-7 7',
+  star: 'M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z',
+  sun: 'M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9zM12 2.5v2M12 19.5v2M4.6 4.6L6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4',
+  cal: 'M4 6.5A1.5 1.5 0 015.5 5h13A1.5 1.5 0 0120 6.5v12a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 18.5zM4 10h16M8.5 3v4M15.5 3v4',
+  stack: 'M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5',
+  crew: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 4.3a3.5 3.5 0 010 6.4M18 14.8c2 .8 3.2 2.6 3.5 5.2',
+  spark: 'M12 3l1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6-5.6-1.9 5.6-1.9zM19 3v4M17 5h4',
+  arrow: 'M5 12h14M13 6l6 6-6 6',
+};
+const Ic = ({ n, s = 20, fill }) => html`<svg viewBox="0 0 24 24" width=${s} height=${s} fill=${fill ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d=${PATHS[n]}/></svg>`;
+
+function Avatar({ uid, size = 24 }) {
+  const p = S.profiles[uid];
+  const name = nameOf(uid);
+  if (p && p.avatarUrl) return html`<img class="av" src=${p.avatarUrl} width=${size} height=${size} alt="" title=${name}/>`;
+  const initials = name.split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase();
+  return html`<span class="av" title=${name} aria-hidden="true" style=${{ width: size + 'px', height: size + 'px', fontSize: Math.round(size * 0.42) + 'px', background: (p && p.color) || 'var(--ink-3)' }}>${initials}</span>`;
+}
+const AreaTag = ({ k }) => html`<span class="area" style=${{ '--c': areaColor(k) }}><i aria-hidden="true"></i>${(AREA[k] || AREA.work).label}</span>`;
+const Check = ({ on, onClick, label, disabled }) => html`<button type="button" class=${'check' + (on ? ' on' : '')} role="checkbox" aria-checked=${on ? 'true' : 'false'} aria-label=${label} onClick=${onClick} disabled=${disabled}><${Ic} n="check" s=${15}/></button>`;
+const Thinking = ({ text, onStop }) => html`<div class="thinking" role="status"><span class="spin" aria-hidden="true"></span><span style="flex:1">${text}</span>${onStop && html`<button class="btn btn-sm" onClick=${onStop}>Stop</button>`}</div>`;
+
+// Text input that keeps its own draft while focused and saves after a pause or on blur.
+function Auto({ value, onSave, multiline, cls = 'input', placeholder, id, rows, maxLength = 500, label, disabled }) {
+  const [v, setV] = useState(value || '');
+  const focused = useRef(false);
+  const timer = useRef(null);
+  const latest = useRef(value || '');
+  latest.current = value || '';
+  useEffect(() => { if (!focused.current) setV(value || ''); }, [value]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const save = (nv) => { clearTimeout(timer.current); if (nv !== latest.current) onSave(nv); };
+  const props = {
+    id, class: cls, value: v, placeholder, maxLength, disabled, 'aria-label': label,
+    onInput: (e) => { const nv = e.currentTarget.value; setV(nv); clearTimeout(timer.current); timer.current = setTimeout(() => save(nv), 900); },
+    onFocus: () => { focused.current = true; },
+    onBlur: (e) => { focused.current = false; save(e.currentTarget.value); },
+  };
+  return multiline
+    ? html`<textarea rows=${rows || 3} ...${props}></textarea>`
+    : html`<input type="text" autocomplete="off" enterkeyhint="done" onKeyDown=${(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} ...${props}/>`;
+}
+
+function Adder({ placeholder = 'Add a move', onAdd, id }) {
+  const [v, setV] = useState('');
+  if (S.readOnly || !S.me) return null;
+  const submit = (e) => { e.preventDefault(); const q = parseQuick(v); if (!q.title) return; onAdd(q); setV(''); };
+  return html`<form class="adder" onSubmit=${submit}>
+    <span class="adder-plus" aria-hidden="true"><${Ic} n="plus" s=${18}/></span>
+    <input id=${id} value=${v} onInput=${(e) => setV(e.currentTarget.value)} placeholder=${placeholder} aria-label=${placeholder} enterkeyhint="done" autocomplete="off" maxLength="200"/>
+    ${v.trim() && html`<button class="btn btn-sm btn-pri" type="submit">Add</button>`}
+  </form>`;
+}
+
+function ActionRow({ a, ctx = true, day = false, extra }) {
+  const g = a.goalId ? C('goals').get(a.goalId) : null;
+  const p = projectOf(a);
+  return html`<div class=${'row' + (a.done ? ' done' : '')}>
+    <${Check} on=${!!a.done} label=${a.title} onClick=${() => toggleDone(a)} disabled=${S.readOnly}/>
+    <button class="row-main" onClick=${() => openSheet('action', { id: a.id })}>
+      <span class="row-title">${a.key && html`<span class="key" title="Key move"><${Ic} n="star" s=${14} fill/></span>`}${a.title}</span>
+      <span class="row-meta">
+        ${ctx && p && html`<span class="ctx"><i style=${{ background: areaColor(p.area) }}></i>${g ? g.title : p.title}</span>`}
+        ${day && a.day && html`<span>${relDay(a.day)}</span>`}
+        <span class="num">${mins(a.minutes || 30)}</span>
+        ${extra && html`<span class=${extra.cls || ''}>${extra.text}</span>`}
+      </span>
+    </button>
+    ${a.ownerId && a.ownerId !== S.me && html`<${Avatar} uid=${a.ownerId} size=${22}/>`}
+  </div>`;
+}
+
+function WhoChips() {
+  const ids = crewIds();
+  if (ids.length <= 1) return null;
+  const val = (id) => (id === S.me ? 'me' : id);
+  return html`<div class="chips scroller" role="group" aria-label="Whose plan to show">
+    ${ids.map((id) => html`<button class="chip" aria-pressed=${String(UI.who === val(id))} onClick=${() => ui({ who: val(id) })}><${Avatar} uid=${id} size=${22}/>${id === S.me ? 'You' : firstName(id)}</button>`)}
+    <button class="chip" aria-pressed=${String(UI.who === 'all')} onClick=${() => ui({ who: 'all' })}>Everyone</button>
+  </div>`;
+}
+
+function PersonSelect({ value, onChange, allowNone, id, label = 'Owner', cls = 'select' }) {
+  const ids = crewIds();
+  if (value && !ids.includes(value)) ids.push(value);
+  return html`<select id=${id} class=${cls} aria-label=${label} value=${value || ''} disabled=${S.readOnly} onChange=${(e) => onChange(e.currentTarget.value || null)}>
+    ${allowNone && html`<option value="">No owner</option>`}
+    ${ids.map((x) => html`<option value=${x}>${x === S.me ? 'You' : nameOf(x)}</option>`)}
+  </select>`;
+}
+
+// value: '' | 'p:<projectId>' | 'g:<goalId>'
+function TargetSelect({ value, onChange, id, label = 'Goal or project' }) {
+  const ps = projects().filter((p) => (p.status || 'active') !== 'done').sort((a, b) => a.title.localeCompare(b.title));
+  return html`<select id=${id} class="select" aria-label=${label} value=${value} disabled=${S.readOnly} onChange=${(e) => onChange(e.currentTarget.value)}>
+    <option value="">No project (loose move)</option>
+    ${ps.map((p) => html`<optgroup label=${p.title}>
+      <option value=${'p:' + p.id}>${p.title}, no specific goal</option>
+      ${projectGoals(p.id).filter((g) => g.status === 'active').map((g) => html`<option value=${'g:' + g.id}>${g.title}</option>`)}
+    </optgroup>`)}
+  </select>`;
+}
+const targetOf = (a) => (a.goalId ? 'g:' + a.goalId : a.projectId ? 'p:' + a.projectId : '');
+function targetPatch(v) {
+  if (!v) return { goalId: null, projectId: null };
+  if (v.startsWith('p:')) return { goalId: null, projectId: v.slice(2) };
+  const g = C('goals').get(v.slice(2));
+  return { goalId: g ? g.id : null, projectId: g ? g.projectId : null };
+}
+
+function DayChips({ value, onChange }) {
+  const t = todayIso();
+  const opts = [['Today', t], ['Tomorrow', addDays(t, 1)], ['Someday', null]];
+  return html`<div class="chips">
+    ${opts.map(([l, d]) => html`<button type="button" class="chip" aria-pressed=${String((value || null) === d)} onClick=${() => onChange(d)} disabled=${S.readOnly}>${l}</button>`)}
+    <input type="date" class="select-inline" aria-label="Pick a date" value=${value || ''} disabled=${S.readOnly} onChange=${(e) => onChange(e.currentTarget.value || null)}/>
+  </div>`;
+}
+
+/* ───────────── Shell ───────────── */
+
+function TopBar() {
+  return html`<header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"><${Ic} n="check" s=${15}/></span><span>GoalScheduler</span></div>
+    <div class="top-r">
+      ${S.mode === 'loading' && html`<span class="pill">Connecting…</span>`}
+      ${S.mode === 'local' && html`<span class="pill pill-gold">Preview</span>`}
+      ${S.mode === 'live' && S.readOnly && html`<span class="pill">View only</span>`}
+      ${S.me && html`<button onClick=${() => ui({ tab: 'crew' })} aria-label="Crew and settings"><${Avatar} uid=${S.me} size=${30}/></button>`}
+    </div>
+  </header>`;
+}
+function Banners() {
+  if (S.mode === 'local') return html`<div class="banner">Preview mode: changes stay in this tab only. Open the published page in Claude to save plans and share them with your crew.</div>`;
+  if (S.mode === 'live' && !S.me) return html`<div class="banner">Sign in to Claude to plan with your crew.</div>`;
+  if (S.mode === 'live' && S.readOnly) return html`<div class="banner">${RO_MSG}</div>`;
+  return null;
+}
+function TabBar() {
+  const tab = (k, l, n) => html`<button class="tab" aria-current=${UI.tab === k ? 'page' : null} onClick=${() => ui({ tab: k, ...(k === 'projects' && UI.tab === 'projects' ? { projectId: null } : {}) })}><${Ic} n=${n} s=${22}/>${l}</button>`;
+  return html`<nav class="tabbar" aria-label="Sections"><div class="tabbar-in">
+    ${tab('today', 'Today', 'sun')}
+    ${tab('plan', 'Plan', 'cal')}
+    <div class="fab-wrap"><button class="fab" aria-label="Capture: add moves or brain-dump" onClick=${() => (S.readOnly ? toast(RO_MSG) : openSheet('capture'))}><${Ic} n="plus" s=${28}/></button></div>
+    ${tab('projects', 'Projects', 'stack')}
+    ${tab('crew', 'Crew', 'crew')}
+  </div></nav>`;
+}
+
+function Sheet({ title, children, foot }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const prev = document.activeElement;
+    const onKey = (e) => { if (e.key === 'Escape') closeSheet(); };
+    document.addEventListener('keydown', onKey);
+    const ov = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus({ preventScroll: true });
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ov; if (prev && prev.focus) prev.focus({ preventScroll: true }); };
+  }, []);
+  return html`<div class="scrim" onClick=${closeSheet}></div>
+  <div class=${'sheet' + (foot ? ' has-foot' : '')} role="dialog" aria-modal="true" aria-label=${title} ref=${ref} tabindex="-1">
+    <div class="sheet-scroll">
+      <div class="sheet-h"><h2 class="display h-m">${title}</h2><button class="icon-btn" aria-label="Close" onClick=${closeSheet}><${Ic} n="x"/></button></div>
+      <div class="sheet-body">${children}</div>
+    </div>
+    ${foot && html`<div class="sheet-foot">${foot}</div>`}
+  </div>`;
+}
+
+/* ───────────── Today ───────────── */
+
+function big3Candidates() {
+  const t = todayIso(), me = S.me;
+  const focus = new Set((getLog(me, 'w-' + weekStart(t)) || {}).focus || []);
+  const rank = (a) => (a.key ? 4 : 0) + (a.day && a.day < t ? 2 + Math.min(a.carried || 0, 3) : 0) + (a.day === t ? 3 : 0) + (focus.has(a.goalId) ? 2 : 0);
+  return actions().filter((a) => a.ownerId === me && !a.done && (a.day ? a.day <= addDays(t, 1) : a.key || focus.has(a.goalId)))
+    .sort((x, y) => rank(y) - rank(x) || byOrder(x, y));
+}
+
+function TodayView() {
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
+  const t = todayIso(), me = S.me, ro = S.readOnly || !me;
+  const key = 'd-' + t;
+  const day = getLog(me, key) || {};
+  const all = actions();
+  const mineToday = all.filter((a) => a.ownerId === me && a.day === t);
+  const carried = all.filter((a) => a.ownerId === me && a.day && a.day < t && !a.done).sort((x, y) => x.day.localeCompare(y.day));
+  const big = [0, 1, 2].map((i) => { const id = (day.big3 || [])[i]; return id && C('actions').has(id) ? id : null; });
+  const bigSet = new Set(big.filter(Boolean));
+  const bigFilled = bigSet.size;
+  const bigDone = [...bigSet].filter((id) => C('actions').get(id).done).length;
+  const rest = mineToday.filter((a) => !bigSet.has(a.id)).sort(byDone);
+  const todayAll = [...mineToday, ...[...bigSet].map((id) => C('actions').get(id)).filter((a) => a.day !== t)];
+  const doneN = todayAll.filter((a) => a.done).length;
+  const planned = todayAll.reduce((s, a) => s + (a.minutes || 30), 0);
+  const cap = capOf(me);
+  const ratings = day.ratings || {};
+  const score = scoreOf(day);
+  const evening = new Date().getHours() >= 17;
+  const loading = S.mode === 'loading' || (S.mode === 'live' && !LOADED.has('actions'));
+
+  async function pickBig3() {
+    setAiBusy(true); setAiMsg('');
+    try {
+      const cands = big3Candidates().filter((a) => !bigSet.has(a.id)).slice(0, 30);
+      if (!cands.length) { setAiMsg('Add a few moves first (or star key moves in your projects), then Claude can pick.'); return; }
+      const focus = ((getLog(me, 'w-' + weekStart(t)) || {}).focus || []).map((id) => C('goals').get(id)).filter(Boolean);
+      const prompt = `${PRINCIPLES}
+
+Today is ${longDate(t)}.
+This week's outcomes: ${focus.map((g) => `"${g.title}"`).join(', ') || '(none set)'}
+${bigFilled ? `Already in today's Big 3: ${[...bigSet].map((id) => C('actions').get(id).title).join('; ')}\n` : ''}
+Candidate actions:
+${cands.map((a) => { const g = a.goalId && C('goals').get(a.goalId); const p = projectOf(a); return `- id=${a.id} | ${a.title} | ${p ? p.title : 'no project'}${g ? ' / ' + g.title : ''} | ${a.minutes || 30} min${a.key ? ' | KEY' : ''}${a.day && a.day < t ? ` | planned ${a.day}, moved ${a.carried || 0}x` : ''}${g && g.due ? ` | goal due ${g.due}` : ''}`; }).join('\n')}
+
+Pick the ${3 - bigFilled} action(s) that would make today a win. Favor key actions, this week's outcomes, near deadlines, and anything that keeps slipping. Keep the total realistic for one day.
+
+Reply with only JSON: {"ids":["id"],"why":"one short sentence"}`;
+      const r = await ask(prompt, { modelTier: 'quick', cache: false });
+      const ids = (Array.isArray(r && r.ids) ? r.ids : []).filter((id) => C('actions').has(id) && !bigSet.has(id));
+      const free = [0, 1, 2].filter((i) => !big[i]);
+      ids.slice(0, free.length).forEach((id, n) => setBig(free[n], id));
+      setAiMsg(ids.length ? str(r && r.why, 240) : 'Claude didn’t find a clear pick. Choose one yourself.');
+    } catch (e) { setAiMsg(aiError(e)); }
+    finally { setAiBusy(false); }
+  }
+
+  const setWord = (i, v) => { const w = [...((getLog(me, key) || {}).words || ['', '', ''])]; while (w.length < 3) w.push(''); w[i] = v.trim(); saveLog(key, { words: w, date: t }); };
+  const setGrat = (i, v) => { const w = [...((getLog(me, key) || {}).grateful || ['', '', ''])]; while (w.length < 3) w.push(''); w[i] = v.trim(); saveLog(key, { grateful: w, date: t }); };
+  const rate = (k, n) => { const r = { ...((getLog(me, key) || {}).ratings || {}) }; if (r[k] === n) delete r[k]; else r[k] = n; saveLog(key, { ratings: r, date: t }); };
+
+  return html`<div class="page">
+    <header class="today-h">
+      <div class="label">${fmt(t, { weekday: 'long' })} · Week ${isoWeek(t)} · Day ${dayOfYear(t)}</div>
+      <h1 class="display h-xl">${fmt(t, { month: 'long', day: 'numeric' })}</h1>
+      <div class="today-stats">
+        <span><b class="num">${doneN}</b> of <b class="num">${todayAll.length}</b> moves done</span>
+        <span class=${planned > cap ? 'over' : ''}>${mins(planned)} planned of ${mins(cap)}</span>
+      </div>
+      <div class="bar"><i style=${{ '--p': String(todayAll.length ? doneN / todayAll.length : 0) }}></i></div>
+    </header>
+
+    <${CrewStrip} t=${t}/>
+
+    <section class="sec">
+      <h2 class="label">Who I want to be today</h2>
+      <div class="words">${[0, 1, 2].map((i) => html`<${Auto} key=${'w' + i} id=${'word' + i} cls="word" value=${(day.words || [])[i] || ''} placeholder=${['Focused', 'Bold', 'Generous'][i]} label=${'Word ' + (i + 1) + ' for who you want to be today'} maxLength=${18} disabled=${ro} onSave=${(v) => setWord(i, v)}/>`)}</div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">
+        <h2 class="label">Big 3 · moves that make today a win</h2>
+        ${aiReady() && bigFilled < 3 && html`<button class="btn btn-sm btn-ai" disabled=${aiBusy} onClick=${pickBig3}><${Ic} n="spark" s=${16}/>${aiBusy ? 'Picking…' : 'Help me pick'}</button>`}
+      </div>
+      <div class="big3">${big.map((id, i) => id
+        ? html`<${BigSlot} key=${'b' + i} i=${i} a=${C('actions').get(id)} t=${t}/>`
+        : html`<button key=${'e' + i} class="slot empty" disabled=${ro} onClick=${() => openSheet('big3', { slot: i })}><span class="slot-n" aria-hidden="true">${i + 1}</span><span>Choose a move</span></button>`)}</div>
+      ${bigFilled === 3 && bigDone === 3 && html`<p class="win">Big 3 done. Today’s a win.</p>`}
+      ${aiMsg && html`<p class="hint" role="status">${aiMsg}</p>`}
+    </section>
+
+    ${carried.length > 0 && html`<section class="sec">
+      <div class="sec-h"><h2 class="label">Carried over · ${carried.length}</h2></div>
+      <p class="hint">Unfinished moves from earlier days. Decide: today, tomorrow, or someday.</p>
+      <div class="list">${carried.map((a) => html`<${CarryRow} key=${a.id} a=${a} t=${t}/>`)}</div>
+    </section>`}
+
+    <section class="sec">
+      <h2 class="label">${bigFilled ? 'Also today' : 'Today'}</h2>
+      ${loading
+        ? html`<p class="hint">Loading your moves…</p>`
+        : !rest.length && !bigFilled && html`<p class="hint">Nothing planned for today yet. Add a move below, or open a project and schedule one.</p>`}
+      <div class="list">${rest.map((a) => html`<${ActionRow} key=${a.id} a=${a}/>`)}</div>
+      <${Adder} id="today-add" placeholder="Add a move for today (try “Call supplier 15m”)" onAdd=${(q) => newAction({ ...q, day: t })}/>
+    </section>
+
+    <details class="fold">
+      <summary><span class="label">Morning priming · gratitude</span><span class="chev"><${Ic} n="chevR" s=${18}/></span></summary>
+      <div class="fold-body">
+        <p class="hint">Three things you’re grateful for. Start from gratitude, then go.</p>
+        <div class="grat">${[0, 1, 2].map((i) => html`<${Auto} key=${'g' + i} id=${'grat' + i} value=${(day.grateful || [])[i] || ''} placeholder=${'Grateful for…'} label=${'Gratitude ' + (i + 1)} maxLength=${200} disabled=${ro} onSave=${(v) => setGrat(i, v)}/>`)}</div>
+      </div>
+    </details>
+
+    <details class="fold" open=${evening || score > 0}>
+      <summary><span class="label">Evening review · six habits</span><span class="score-mini">${score ? score + '/30' : ''}</span></summary>
+      <div class="fold-body">
+        <p class="hint">Rate today from 1 to 5 on each high performance habit. The trend matters more than any single day.</p>
+        ${HABITS.map((hb) => html`<div class="rate" key=${hb.key}>
+          <div class="rate-top"><b>${hb.label}</b><span class="rate-q">${hb.q}</span></div>
+          <div class="dots5" role="group" aria-label=${hb.label + ' rating'}>${[1, 2, 3, 4, 5].map((n) => html`<button aria-pressed=${String(ratings[hb.key] === n)} disabled=${ro} onClick=${() => rate(hb.key, n)}>${n}</button>`)}</div>
+        </div>`)}
+        <div class="score-row"><span class="display score num">${score}</span><span class="hint">of 30 · high performance score</span></div>
+        <label class="field"><span>Today’s win</span><${Auto} multiline id="win" cls="textarea" rows=${2} value=${day.win} placeholder="What went right? Say it out loud." label="Today's win" maxLength=${600} disabled=${ro} onSave=${(v) => saveLog(key, { win: v.trim(), date: t })}/></label>
+        <label class="field"><span>Lesson or adjustment</span><${Auto} multiline id="lesson" cls="textarea" rows=${2} value=${day.lesson} placeholder="What will you do differently tomorrow?" label="Lesson" maxLength=${600} disabled=${ro} onSave=${(v) => saveLog(key, { lesson: v.trim(), date: t })}/></label>
+      </div>
+    </details>
+  </div>`;
+}
+
+function BigSlot({ i, a, t }) {
+  const g = a.goalId && C('goals').get(a.goalId);
+  const p = projectOf(a);
+  return html`<div class=${'slot' + (a.done ? ' done' : '')}>
+    <span class="slot-n" aria-hidden="true">${i + 1}</span>
+    <${Check} on=${!!a.done} label=${a.title} onClick=${() => toggleDone(a)} disabled=${S.readOnly}/>
+    <button class="row-main" onClick=${() => openSheet('action', { id: a.id })}>
+      <span class="row-title">${a.title}</span>
+      <span class="row-meta">${p && html`<span class="ctx"><i style=${{ background: areaColor(p.area) }}></i>${g ? g.title : p.title}</span>`}<span class="num">${mins(a.minutes || 30)}</span>${a.day && a.day !== t && html`<span>${relDay(a.day)}</span>`}</span>
+    </button>
+    ${!S.readOnly && html`<button class="icon-btn" aria-label=${'Remove from Big 3: ' + a.title} onClick=${() => setBig(i, null)}><${Ic} n="x" s=${16}/></button>`}
+  </div>`;
+}
+
+function CarryRow({ a, t }) {
+  const late = dayDiff(a.day, t);
+  const c = a.carried || 0;
+  return html`<div class="carry">
+    <${ActionRow} a=${a} extra=${{ text: late === 1 ? 'from yesterday' : `${late} days late`, cls: 'late' }}/>
+    ${c >= 3 && html`<p class="slip">Moved ${c} times. Shrink it or drop it.</p>`}
+    ${!S.readOnly && html`<div class="carry-acts">
+      <button class="btn btn-sm" onClick=${() => moveTo(a, t)}>Do today</button>
+      <button class="btn btn-sm" onClick=${() => moveTo(a, addDays(t, 1))}>Tomorrow</button>
+      <button class="btn btn-sm" onClick=${() => moveTo(a, null)}>Someday</button>
+      ${c >= 2 && aiReady() && html`<button class="btn btn-sm btn-ai" onClick=${() => openSheet('breakdown', { id: a.id })}><${Ic} n="spark" s=${15}/>Break it down</button>`}
+    </div>`}
+  </div>`;
+}
+
+function CrewStrip({ t }) {
+  const others = crewIds().filter((id) => id !== S.me);
+  if (!others.length) return null;
+  return html`<div class="chips scroller crew-strip" aria-label="Your crew today">${others.map((id) => {
+    const d = getLog(id, 'd-' + t) || {};
+    const b = (d.big3 || []).filter((x) => x && C('actions').has(x));
+    const bd = b.filter((x) => C('actions').get(x).done).length;
+    return html`<button class="crew-chip" onClick=${() => ui({ tab: 'crew' })}>
+      <${Avatar} uid=${id} size=${30}/>
+      <span class="crew-chip-t"><b>${firstName(id)}</b><span class="num">${b.length ? `${bd}/${b.length} Big 3` : 'No Big 3 yet'}</span></span>
+    </button>`;
+  })}</div>`;
+}
+
+/* ───────────── Plan: week / month / year ───────────── */
+
+function PlanView() {
+  return html`<div class="page">
+    <div class="page-h"><h1 class="display h-l">Plan</h1></div>
+    <div class="seg" role="group" aria-label="Plan range">${[['week', 'Week'], ['month', 'Month'], ['year', 'Year']].map(([k, l]) => html`<button aria-pressed=${String(UI.plan === k)} onClick=${() => ui({ plan: k })}>${l}</button>`)}</div>
+    <div style="padding-top:10px"><${WhoChips}/></div>
+    ${UI.plan === 'month' ? html`<${MonthView}/>` : UI.plan === 'year' ? html`<${YearView}/>` : html`<${WeekView}/>`}
+  </div>`;
+}
+
+function WeekView() {
+  const [showAll, setShowAll] = useState(false);
+  const t = todayIso();
+  const ws = UI.weekOf || weekStart(t), we = addDays(ws, 6);
+  const uid = whoId();
+  const addUid = uid || S.me;
+  const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const acts = actions().filter((a) => !uid || a.ownerId === uid);
+  const wk = acts.filter((a) => a.day && a.day >= ws && a.day <= we);
+  const byDay = groupBy(wk, (a) => a.day);
+  const people = uid ? [uid] : crewIds();
+  const focus = [];
+  for (const p of people) for (const gid of ((getLog(p, 'w-' + ws) || {}).focus || [])) if (C('goals').has(gid)) focus.push({ g: C('goals').get(gid), p });
+  const focusSet = new Set(focus.map((x) => x.g.id));
+  const canLog = UI.who === 'me' && !S.readOnly && !!S.me;
+  const wlog = getLog(S.me, 'w-' + ws) || {};
+  const open = acts.filter((a) => !a.done && !a.day);
+  const ready = [...open.filter((a) => focusSet.has(a.goalId)).sort(byDone), ...open.filter((a) => !focusSet.has(a.goalId)).sort(byDone)];
+  const shown = showAll ? ready : ready.slice(0, 8);
+  const cap = capOf(addUid);
+  const isThis = ws === weekStart(t);
+
+  return html`<div>
+    <div class="nav-row">
+      <button class="icon-btn" aria-label="Previous week" onClick=${() => ui({ weekOf: addDays(ws, -7) })}><${Ic} n="chevL"/></button>
+      <div class="nav-title">${fmt(ws, { month: 'short', day: 'numeric' })} – ${fmt(we, ws.slice(5, 7) === we.slice(5, 7) ? { day: 'numeric' } : { month: 'short', day: 'numeric' })}</div>
+      <button class="icon-btn" aria-label="Next week" onClick=${() => ui({ weekOf: addDays(ws, 7) })}><${Ic} n="chevR"/></button>
+    </div>
+    <div class="nav-sub"><span>Week ${isoWeek(ws)}</span><span class="num">${wk.filter((a) => a.done).length}/${wk.length} moves done</span>${!isThis && html`<button class="btn-ghost btn btn-sm" onClick=${() => ui({ weekOf: null })}>This week</button>`}</div>
+
+    <section class="sec">
+      <div class="sec-h"><h2 class="label">Outcomes this week</h2>${canLog && html`<button class="btn btn-sm" onClick=${() => openSheet('focus', { week: ws })}><${Ic} n="plus" s=${16}/>Choose</button>`}</div>
+      ${focus.length
+        ? html`<div class="focus">${focus.map(({ g, p }) => { const ga = goalActions(g.id); const pr = progress(ga); const proj = C('projects').get(g.projectId); return html`<div class="fcard" key=${p + g.id}>
+            <button class="fcard-main" onClick=${() => openSheet('goal', { id: g.id })}>
+              <span class="fcard-t">${g.title}</span>
+              <span class="row-meta">${proj && html`<span class="ctx"><i style=${{ background: areaColor(proj.area) }}></i>${proj.title}</span>`}<span class="num">${pr.d}/${pr.t} moves</span>${g.due && html`<span class=${dueCls(g)}>${dueText(g.due)}</span>`}</span>
+              <span class="bar gold"><i style=${{ '--p': String(g.status === 'done' ? 1 : pr.pct) }}></i></span>
+            </button>
+            ${!uid && html`<${Avatar} uid=${p} size=${24}/>`}
+            ${canLog && html`<button class="icon-btn" aria-label=${'Remove outcome: ' + g.title} onClick=${() => saveLog('w-' + ws, { week: ws, focus: (wlog.focus || []).filter((x) => x !== g.id) })}><${Ic} n="x" s=${16}/></button>`}
+          </div>`; })}</div>`
+        : html`<div class="empty"><span>Pick the 3 to 5 results that would make this a great week. Their moves show up below, ready to schedule.</span>${canLog && html`<button class="btn btn-sm btn-pri" onClick=${() => openSheet('focus', { week: ws })}>Choose outcomes</button>`}</div>`}
+    </section>
+
+    ${days.map((d) => { const list = (byDay.get(d) || []).sort(byDone); const load = list.reduce((s, a) => s + (a.minutes || 30), 0); return html`<section key=${d} class=${'wday' + (d === t ? ' is-today' : '') + (d < t ? ' is-past' : '')} aria-label=${longDate(d)}>
+      <div class="wday-h"><span class="wday-name">${fmt(d, { weekday: 'short' })} ${parse(d).getDate()}</span>${d === t && html`<span class="label" style="color:var(--pine)">Today</span>`}<span class=${'wday-load' + (load > cap ? ' over' : '')}>${list.length ? `${mins(load)} / ${mins(cap)}` : ''}</span></div>
+      <div class="list">${list.map((a) => html`<${ActionRow} key=${a.id} a=${a} extra=${d < t && !a.done ? { text: 'not done', cls: 'late' } : null}/>`)}</div>
+      ${d >= t && html`<${Adder} placeholder="Add a move" onAdd=${(q) => newAction({ ...q, day: d, ownerId: addUid })}/>`}
+    </section>`; })}
+
+    <section class="sec">
+      <div class="sec-h"><h2 class="label">Ready to schedule · ${ready.length}</h2></div>
+      ${ready.length
+        ? html`<div class="list ready">${shown.map((a) => html`<div key=${a.id}>
+            <${ActionRow} a=${a}/>
+            ${!S.readOnly && html`<div class="daypick" role="group" aria-label=${'Schedule ' + a.title}>${days.map((d) => html`<button class=${d === t ? 'today' : ''} disabled=${d < t} aria-label=${'Schedule for ' + longDate(d)} onClick=${() => patchDoc('actions', a.id, { day: d })}>${fmt(d, { weekday: 'narrow' })}</button>`)}</div>`}
+          </div>`)}</div>
+          ${ready.length > shown.length && html`<button class="btn btn-ghost" onClick=${() => setShowAll(true)}>Show all ${ready.length}</button>`}`
+        : html`<p class="hint">No unscheduled moves. Open a project to plan its moves, or use the + button.</p>`}
+    </section>
+
+    ${canLog && html`<details class="fold">
+      <summary><span class="label">Weekly review</span><span class="chev"><${Ic} n="chevR" s=${18}/></span></summary>
+      <div class="fold-body">
+        <label class="field"><span>Wins this week</span><${Auto} multiline id="wk-wins" cls="textarea" value=${wlog.wins} placeholder="What moved? Celebrate it." label="Wins this week" maxLength=${1000} onSave=${(v) => saveLog('w-' + ws, { week: ws, wins: v.trim() })}/></label>
+        <label class="field"><span>Lessons</span><${Auto} multiline id="wk-lessons" cls="textarea" value=${wlog.lessons} placeholder="What got in the way? What will you change?" label="Lessons" maxLength=${1000} onSave=${(v) => saveLog('w-' + ws, { week: ws, lessons: v.trim() })}/></label>
+        <label class="field"><span>Next week’s must</span><${Auto} multiline id="wk-next" cls="textarea" value=${wlog.next} placeholder="The one result that has to happen next week." label="Next week's must" maxLength=${600} onSave=${(v) => saveLog('w-' + ws, { week: ws, next: v.trim() })}/></label>
+      </div>
+    </details>`}
+  </div>`;
+}
+
+function MonthView() {
+  const t = todayIso();
+  const mk = UI.monthOf || t.slice(0, 7);
+  const first = mk + '-01';
+  const start = weekStart(first), nextFirst = addMonths(first, 1);
+  const cells = [];
+  for (let d = start; d < nextFirst || cells.length % 7; d = addDays(d, 1)) cells.push(d);
+  const uid = whoId();
+  const logUid = uid || S.me;
+  const acts = actions().filter((a) => a.day && a.day >= cells[0] && a.day <= cells[cells.length - 1] && (!uid || a.ownerId === uid));
+  const byDay = groupBy(acts, (a) => a.day);
+  const due = goals().filter((g) => g.due && g.due.startsWith(mk) && (!uid || g.ownerId === uid)).sort((a, b) => a.due.localeCompare(b.due));
+  const dueDays = new Set(due.map((g) => g.due));
+  const sel = UI.selDay && UI.selDay.startsWith(mk) ? UI.selDay : t.startsWith(mk) ? t : first;
+  const selActs = (byDay.get(sel) || []).sort(byDone);
+  const mlog = getLog(logUid, 'm-' + mk) || {};
+  const canLog = logUid === S.me && !S.readOnly && !!S.me;
+  const monthActs = acts.filter((a) => a.day.startsWith(mk));
+  return html`<div>
+    <div class="nav-row">
+      <button class="icon-btn" aria-label="Previous month" onClick=${() => ui({ monthOf: addMonths(first, -1).slice(0, 7), selDay: null })}><${Ic} n="chevL"/></button>
+      <div class="nav-title">${fmt(first, { month: 'long', year: 'numeric' })}</div>
+      <button class="icon-btn" aria-label="Next month" onClick=${() => ui({ monthOf: addMonths(first, 1).slice(0, 7), selDay: null })}><${Ic} n="chevR"/></button>
+    </div>
+    <div class="nav-sub"><span class="num">${monthActs.filter((a) => a.done).length}/${monthActs.length} moves done</span><span class="num">${due.length} goal${due.length === 1 ? '' : 's'} due</span></div>
+
+    <section class="sec">
+      <h2 class="label">This month’s intention</h2>
+      ${canLog
+        ? html`<${Auto} id="m-int" cls="input" value=${mlog.intention} placeholder="One sentence: what this month is about." label="This month's intention" maxLength=${200} onSave=${(v) => saveLog('m-' + mk, { month: mk, intention: v.trim() })}/>`
+        : html`<p class="why">${mlog.intention || 'No intention written.'}</p>`}
+    </section>
+
+    <section class="sec">
+      <div class="mgrid" role="group" aria-label="Calendar">
+        ${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<div class="mhead" key=${'h' + i} aria-hidden="true">${d}</div>`)}
+        ${cells.map((d) => { const list = byDay.get(d) || []; const done = list.filter((a) => a.done).length; const sc = scoreOf(getLog(logUid, 'd-' + d)); return html`<button key=${d} class=${'mcell' + (d.startsWith(mk) ? '' : ' out') + (d === t ? ' today' : '')} aria-pressed=${String(d === sel)}
+            aria-label=${`${longDate(d)}: ${list.length} moves, ${done} done${dueDays.has(d) ? ', goal due' : ''}${sc ? `, score ${sc}` : ''}`}
+            onClick=${() => ui({ selDay: d, monthOf: d.slice(0, 7) })}>
+          <span class="mcell-top"><span class="mnum">${parse(d).getDate()}</span>${dueDays.has(d) && html`<span class="mdue"></span>`}</span>
+          <span class="mdots">${list.slice(0, 8).map((a) => html`<i class=${a.done ? 'd' : ''}></i>`)}${sc ? html`<span class="mscore">${sc}</span>` : ''}</span>
+        </button>`; })}
+      </div>
+      <div class="legend"><span><i></i>done</span><span><i class="o"></i>planned</span><span><i class="g"></i>goal due</span>${logUid && html`<span>Small number: that evening’s habit score</span>`}</div>
+    </section>
+
+    <section class="sec">
+      <h2 class="label">${relDay(sel)}${relDay(sel) !== fmt(sel, { month: 'short', day: 'numeric' }) ? ' · ' + fmt(sel, { month: 'short', day: 'numeric' }) : ''}</h2>
+      <div class="list">${selActs.map((a) => html`<${ActionRow} key=${a.id} a=${a}/>`)}</div>
+      ${!selActs.length && html`<p class="hint">No moves on this day.</p>`}
+      ${sel >= t && html`<${Adder} placeholder=${'Add a move for ' + relDay(sel)} onAdd=${(q) => newAction({ ...q, day: sel, ownerId: uid || S.me })}/>`}
+    </section>
+
+    <section class="sec">
+      <h2 class="label">Goals due this month</h2>
+      ${due.length
+        ? html`<div class="list">${due.map((g) => html`<${GoalLine} key=${g.id} g=${g}/>`)}</div>`
+        : html`<p class="hint">No goal deadlines this month.</p>`}
+    </section>
+  </div>`;
+}
+
+function GoalLine({ g }) {
+  const pr = progress(goalActions(g.id));
+  const p = C('projects').get(g.projectId);
+  return html`<button class="row" style="width:100%" onClick=${() => openSheet('goal', { id: g.id })}>
+    <span class="ring" style=${{ '--p': String(g.status === 'done' ? 1 : pr.pct) }}><span>${g.status === 'done' ? html`<${Ic} n="check" s=${14}/>` : Math.round(pr.pct * 100) + '%'}</span></span>
+    <span class="row-main">
+      <span class="row-title">${g.title}</span>
+      <span class="row-meta">${p && html`<span class="ctx"><i style=${{ background: areaColor(p.area) }}></i>${p.title}</span>`}<span class=${dueCls(g)}>${g.status === 'done' ? 'Done' : dueText(g.due)}</span></span>
+    </span>
+    ${g.ownerId && g.ownerId !== S.me && html`<${Avatar} uid=${g.ownerId} size=${22}/>`}
+  </button>`;
+}
+
+function YearView() {
+  const t = todayIso();
+  const y = UI.year || +t.slice(0, 4);
+  const key = 'y-' + y;
+  const uid = whoId();
+  const logUid = uid || S.me;
+  const ylog = getLog(logUid, key) || {};
+  const canLog = logUid === S.me && !S.readOnly && !!S.me;
+  const gs = goals().filter((g) => !uid || g.ownerId === uid);
+  const yearGoals = gs.filter((g) => g.due && g.due.startsWith(String(y)));
+  const ps = projects().filter((p) => (p.status || 'active') !== 'done' && projectVisible(p, uid));
+  const isThisYear = y === +t.slice(0, 4);
+  const elapsed = isThisYear ? dayOfYear(t) / daysInYear(y) : y < +t.slice(0, 4) ? 1 : 0;
+  const curMonth = t.slice(0, 7);
+  const undated = gs.filter((g) => !g.due && g.status === 'active');
+  return html`<div>
+    <div class="nav-row">
+      <button class="icon-btn" aria-label="Previous year" onClick=${() => ui({ year: y - 1 })}><${Ic} n="chevL"/></button>
+      <div class="nav-title">${y}</div>
+      <button class="icon-btn" aria-label="Next year" onClick=${() => ui({ year: y + 1 })}><${Ic} n="chevR"/></button>
+    </div>
+    <div class="nav-sub"><span class="num">${yearGoals.filter((g) => g.status === 'done').length}/${yearGoals.length} goals done</span>${isThisYear && html`<span class="num">Day ${dayOfYear(t)} of ${daysInYear(y)}</span>`}</div>
+    <div class="bar gold" style="margin-top:8px" aria-label=${Math.round(elapsed * 100) + '% of the year gone'}><i style=${{ '--p': String(elapsed) }}></i></div>
+
+    <section class="sec">
+      <h2 class="label">Theme for ${y}</h2>
+      ${canLog
+        ? html`<${Auto} id="y-theme" cls="theme-input" value=${ylog.theme} placeholder="The year of…" label=${'Theme for ' + y} maxLength=${60} onSave=${(v) => saveLog(key, { year: y, theme: v.trim() })}/>`
+        : html`<p class="display h-l">${ylog.theme || '—'}</p>`}
+    </section>
+
+    <section class="sec">
+      <h2 class="label">Vision by life area</h2>
+      <p class="hint">By December 31, what will be true in each part of your life? Write it like it already happened.</p>
+      <div class="areas">${AREAS.map((a) => { const ap = ps.filter((p) => (p.area || 'work') === a.key); const ag = gs.filter((g) => g.status === 'active' && ap.some((p) => p.id === g.projectId)); return html`<div class="acard" key=${a.key} style=${{ '--c': areaColor(a.key) }}>
+        <div class="acard-h"><${AreaTag} k=${a.key}/><span class="hint num">${ap.length} proj · ${ag.length} goals</span></div>
+        ${canLog
+          ? html`<${Auto} multiline id=${'vis-' + a.key} cls="textarea" rows=${2} value=${(ylog.visions || {})[a.key]} placeholder="It’s December. I…" label=${'Vision for ' + a.label} maxLength=${500} onSave=${(v) => saveLog(key, { year: y, visions: { ...((getLog(S.me, key) || {}).visions || {}), [a.key]: v.trim() } })}/>`
+          : html`<p class="why">${(ylog.visions || {})[a.key] || 'Not written.'}</p>`}
+      </div>`; })}</div>
+    </section>
+
+    <section class="sec">
+      <h2 class="label">Deadlines across the year</h2>
+      <div class="tl">${Array.from({ length: 12 }, (_, m) => { const mk = `${y}-${pad(m + 1)}`; const list = yearGoals.filter((g) => g.due.startsWith(mk)).sort((a, b) => a.due.localeCompare(b.due)); return html`<div key=${mk} class=${'tl-row' + (mk === curMonth ? ' now' : '')}>
+        <button class="tl-m" aria-label=${'Open ' + fmt(mk + '-01', { month: 'long' })} onClick=${() => ui({ plan: 'month', monthOf: mk, selDay: null })}>${fmt(mk + '-01', { month: 'short' })}</button>
+        <div class="tl-goals">${list.map((g) => { const p = C('projects').get(g.projectId); return html`<button key=${g.id} class=${'gchip' + (g.status === 'done' ? ' done' : '')} onClick=${() => openSheet('goal', { id: g.id })}><i style=${{ background: areaColor(p && p.area) }}></i>${g.title}</button>`; })}</div>
+      </div>`; })}</div>
+      ${undated.length > 0 && html`<p class="hint">${undated.length} active goal${undated.length === 1 ? ' has' : 's have'} no deadline. A result without a date is a wish; give ${undated.length === 1 ? 'it' : 'them'} one.</p>`}
+    </section>
+  </div>`;
+}
+
+/* ───────────── Projects ───────────── */
+
+function ProjectsView() {
+  const [status, setStatus] = useState('active');
+  const uid = whoId();
+  const visible = projects().filter((p) => projectVisible(p, uid));
+  const of = (s) => visible.filter((p) => (p.status || 'active') === s);
+  const list = of(status).sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+  const loose = actions().filter((a) => !a.projectId && !a.goalId && !a.done && (!uid || a.ownerId === uid));
+  const ro = S.readOnly || !S.me;
+  return html`<div class="page">
+    <div class="page-h"><h1 class="display h-l">Projects</h1>${!ro && html`<button class="btn btn-pri" onClick=${() => openSheet('project')}><${Ic} n="plus" s=${18}/>New project</button>`}</div>
+    <${WhoChips}/>
+    <div class="seg" role="group" aria-label="Project status" style="margin-block:10px">${[['active', 'Active'], ['paused', 'Paused'], ['done', 'Done']].map(([k, l]) => html`<button aria-pressed=${String(status === k)} onClick=${() => setStatus(k)}>${l} <span class="muted num">${of(k).length}</span></button>`)}</div>
+    ${list.length
+      ? html`<div class="pgrid">${list.map((p) => html`<${ProjectCard} key=${p.id} p=${p}/>`)}</div>`
+      : status === 'active'
+        ? html`<div class="empty"><b>Start with something you’re building.</b><span>A project is a part of your life you want to move: the salon, a trip, getting strong. Give it a reason, then stack goals and mini-projects under it. Claude can suggest the next ones from what’s already there.</span>${!ro && html`<button class="btn btn-pri" onClick=${() => openSheet('project')}>Create a project</button>`}</div>`
+        : html`<p class="hint">No ${status} projects.</p>`}
+    ${loose.length > 0 && html`<button class="loose" onClick=${() => openSheet('loose')}><span>${loose.length} loose move${loose.length === 1 ? '' : 's'} without a project</span><${Ic} n="chevR" s=${18}/></button>`}
+  </div>`;
+}
+
+function ProjectCard({ p }) {
+  const gs = projectGoals(p.id);
+  const active = gs.filter((g) => g.status === 'active');
+  const acts = actions().filter((a) => a.projectId === p.id);
+  const pr = progress(acts);
+  const next = acts.filter((a) => !a.done).sort((a, b) => (b.key ? 1 : 0) - (a.key ? 1 : 0) || (a.day || '9999').localeCompare(b.day || '9999') || byOrder(a, b))[0];
+  const nextDue = active.filter((g) => g.due).sort((a, b) => a.due.localeCompare(b.due))[0];
+  return html`<button class="pcard" onClick=${() => ui({ projectId: p.id })}>
+    <span class="pcard-top"><${AreaTag} k=${p.area}/>${p.ownerId && html`<${Avatar} uid=${p.ownerId} size=${24}/>`}</span>
+    <span class="pcard-title">${p.title}</span>
+    ${p.why ? html`<span class="why clamp2">${p.why}</span>` : html`<span class="hint">No purpose written yet. Why does this matter?</span>`}
+    <span class="bar"><i style=${{ '--p': String(pr.pct) }}></i></span>
+    <span class="pcard-meta"><span class="num">${active.length} active goal${active.length === 1 ? '' : 's'}</span><span class="num">${pr.d}/${pr.t} moves</span>${nextDue && html`<span class=${dueCls(nextDue)}>${dueText(nextDue.due)}</span>`}</span>
+    ${next && html`<span class="pcard-next"><span class="label">Next</span><span>${next.title}</span></span>`}
+  </button>`;
+}
+
+function ProjectDetail({ id }) {
+  const [showDone, setShowDone] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const p = C('projects').get(id);
+  const back = html`<button class="back" onClick=${() => ui({ projectId: null })}><${Ic} n="chevL" s=${18}/>Projects</button>`;
+  if (!p) return html`<div class="page">${back}<div class="empty">This project was deleted.</div></div>`;
+  const ro = S.readOnly || !S.me;
+  const gs = projectGoals(id);
+  const active = gs.filter((g) => g.status === 'active');
+  const finished = gs.filter((g) => g.status !== 'active');
+  const acts = actions().filter((a) => a.projectId === id);
+  const pr = progress(acts);
+  const loose = acts.filter((a) => !a.goalId).sort(byDone);
+  return html`<div class="page">
+    ${back}
+    <header class="pd-h">
+      <div class="pd-meta">
+        <select class="select-inline" aria-label="Life area" value=${p.area || 'work'} disabled=${ro} onChange=${(e) => patchDoc('projects', id, { area: e.currentTarget.value })}>${AREAS.map((a) => html`<option value=${a.key}>${a.label}</option>`)}</select>
+        <select class="select-inline" aria-label="Project status" value=${p.status || 'active'} disabled=${ro} onChange=${(e) => patchDoc('projects', id, { status: e.currentTarget.value })}><option value="active">Active</option><option value="paused">Paused</option><option value="done">Done</option></select>
+      </div>
+      <${Auto} id="p-title" cls="title-input" value=${p.title} label="Project name" maxLength=${80} disabled=${ro} onSave=${(v) => v.trim() && patchDoc('projects', id, { title: v.trim() })}/>
+      <label class="pd-owner"><span>Owner</span><${PersonSelect} value=${p.ownerId} allowNone onChange=${(v) => patchDoc('projects', id, { ownerId: v })}/></label>
+    </header>
+
+    <section class="sec">
+      <h2 class="label">Why it matters</h2>
+      <${Auto} multiline id="p-why" cls="textarea why-input" value=${p.why} placeholder="What will this make possible? Who’s counting on you? Make it a must, not a should." label="Why this project matters" maxLength=${1200} disabled=${ro} onSave=${(v) => patchDoc('projects', id, { why: v.trim() })}/>
+    </section>
+
+    <div class="pd-stats">
+      <div><span class="display stat num">${active.length}</span><span class="label">Active goals</span></div>
+      <div><span class="display stat num">${finished.filter((g) => g.status === 'done').length}</span><span class="label">Goals done</span></div>
+      <div><span class="display stat num">${pr.d}<small>/${pr.t}</small></span><span class="label">Moves done</span></div>
+    </div>
+
+    <section class="sec">
+      <div class="sec-h"><h2 class="label">Goals & mini-projects</h2></div>
+      ${!ro && html`<div class="btn-row">
+        <button class="btn" onClick=${() => openSheet('goal', { projectId: id })}><${Ic} n="plus" s=${18}/>Add goal</button>
+        ${aiReady() && html`<button class="btn btn-ai" onClick=${() => openSheet('suggest', { projectId: id })}><${Ic} n="spark" s=${18}/>Suggest next goals</button>`}
+      </div>`}
+      ${active.length
+        ? html`<div class="glist">${active.map((g, i) => html`<${GoalCard} key=${g.id} g=${g} initiallyOpen=${i === 0}/>`)}</div>`
+        : html`<div class="empty"><span>No active goals yet. Each goal is a <b>result</b> (what exactly you want), a <b>purpose</b> (why it’s a must), and a list of <b>moves</b>.</span>${!ro && aiReady() && html`<button class="btn btn-sm btn-ai" onClick=${() => openSheet('suggest', { projectId: id })}><${Ic} n="spark" s=${16}/>Let Claude suggest a first goal</button>`}</div>`}
+      ${finished.length > 0 && html`<button class="btn btn-ghost" style="justify-self:start" onClick=${() => setShowDone(!showDone)}>${showDone ? 'Hide' : 'Show'} ${finished.length} finished</button>`}
+      ${showDone && html`<div class="glist">${finished.map((g) => html`<${GoalCard} key=${g.id} g=${g}/>`)}</div>`}
+    </section>
+
+    ${(loose.length > 0 || !ro) && html`<section class="sec">
+      <h2 class="label">Moves not tied to a goal</h2>
+      <div class="list">${loose.map((a) => html`<${ActionRow} key=${a.id} a=${a} ctx=${false} day=${true}/>`)}</div>
+      <${Adder} placeholder="Add a move to this project" onAdd=${(q) => newAction({ ...q, projectId: id })}/>
+    </section>`}
+
+    ${!ro && html`<section class="sec danger">
+      ${confirmDel
+        ? html`<p>Delete “${p.title}” with its ${gs.length} goal${gs.length === 1 ? '' : 's'} and ${acts.length} move${acts.length === 1 ? '' : 's'}? This can’t be undone.</p>
+          <div class="btn-row"><button class="btn btn-danger" onClick=${() => deleteProject(id)}>Delete project</button><button class="btn" onClick=${() => setConfirmDel(false)}>Keep it</button></div>`
+        : html`<button class="btn btn-ghost btn-danger" style="justify-self:start" onClick=${() => setConfirmDel(true)}>Delete project…</button>`}
+    </section>`}
+  </div>`;
+}
+
+function GoalCard({ g, initiallyOpen }) {
+  const [open, setOpen] = useState(!!initiallyOpen);
+  const acts = goalActions(g.id);
+  const pr = progress(acts);
+  const pct = g.status === 'done' ? 1 : pr.pct;
+  const ro = S.readOnly || !S.me;
+  return html`<article class=${'gcard' + (g.status !== 'active' ? ' muted' : '')}>
+    <button class="gcard-h" aria-expanded=${String(open)} onClick=${() => setOpen(!open)}>
+      <span class="ring" style=${{ '--p': String(pct) }}><span>${g.status === 'done' ? html`<${Ic} n="check" s=${14}/>` : Math.round(pct * 100) + '%'}</span></span>
+      <span class="gcard-t">
+        <span class="kind">${g.kind === 'mini' ? 'Mini-project' : 'Goal'}${g.status === 'done' ? ' · done' : g.status === 'dropped' ? ' · dropped' : ''}</span>
+        <span class="gtitle">${g.title}</span>
+        <span class="row-meta">${g.due && html`<span class=${dueCls(g)}>${dueText(g.due)}</span>`}<span class="num">${pr.d}/${pr.t} moves</span>${g.ownerId && g.ownerId !== S.me && html`<span class="ctx"><${Avatar} uid=${g.ownerId} size=${16}/>${firstName(g.ownerId)}</span>`}</span>
+      </span>
+      <span class=${'chev' + (open ? ' open' : '')}><${Ic} n="chevR" s=${18}/></span>
+    </button>
+    ${open && html`<div class="gcard-b">
+      <div class="purpose"><span class="label">Purpose</span>${g.why ? html`<p class="why">${g.why}</p>` : html`<p class="hint">Why is this a must? Add it with Edit.</p>`}</div>
+      <div class="list">${acts.map((a) => html`<${ActionRow} key=${a.id} a=${a} ctx=${false} day=${true}/>`)}</div>
+      ${g.status === 'active' && html`<${Adder} placeholder="Add a move" onAdd=${(q) => newAction({ ...q, goalId: g.id })}/>`}
+      <div class="btn-row">
+        ${aiReady() && g.status === 'active' && html`<button class="btn btn-sm btn-ai" onClick=${() => openSheet('moves', { goalId: g.id })}><${Ic} n="spark" s=${15}/>Plan moves with Claude</button>`}
+        <button class="btn btn-sm" onClick=${() => openSheet('goal', { id: g.id })}>Edit</button>
+        ${!ro && g.status === 'active' && html`<button class="btn btn-sm" onClick=${() => { patchDoc('goals', g.id, { status: 'done', doneAt: Date.now() }); toast('Goal done. Nice work.'); }}><${Ic} n="check" s=${15}/>Mark done</button>`}
+        ${!ro && g.status !== 'active' && html`<button class="btn btn-sm" onClick=${() => patchDoc('goals', g.id, { status: 'active', doneAt: null })}>Reopen</button>`}
+      </div>
+    </div>`}
+  </article>`;
+}
+
+/* ───────────── Crew ───────────── */
+
+function CrewView() {
+  const ids = crewIds();
+  const me = S.me;
+  return html`<div class="page">
+    <div class="page-h"><h1 class="display h-l">Crew</h1></div>
+    <p class="hint">Everyone planning in this GoalScheduler. Check in on each other’s Big 3, and cheer the wins.</p>
+    <div class="crew" style="margin-top:12px">${ids.map((id) => html`<${CrewCard} key=${id} uid=${id}/>`)}</div>
+    ${ids.length <= 1 && html`<div class="empty" style="margin-top:10px"><b>Bring your friends in.</b><span>Use the Share button on this page and invite each friend as an <b>Editor</b>. Leave public link sharing off: people who join by link can only view.</span></div>`}
+
+    ${me && !S.readOnly && html`<section class="sec">
+      <h2 class="label">My settings</h2>
+      <label class="field"><span>Daily focus capacity</span>
+        <select id="capacity" class="select" value=${String(capOf(me))} onChange=${(e) => savePerson({ capacity: +e.currentTarget.value })}>
+          ${[60, 120, 180, 240, 300, 360, 420, 480, 600].map((m) => html`<option value=${m}>${mins(m)} of planned moves a day</option>`)}
+        </select>
+      </label>
+      <p class="hint">Days over this limit turn red in your week, so you plan what you can actually do.</p>
+    </section>`}
+
+    <section class="sec method">
+      <h2 class="label">How GoalScheduler works</h2>
+      <div><h3>Result, purpose, moves</h3><p>Every goal answers three questions from Tony Robbins’ Rapid Planning Method. What exactly do I want? Why is it a must? What will I do? Write the result so you’d know when it’s done, and give it a reason strong enough to carry you through the hard days.</p></div>
+      <div><h3>Key moves</h3><p>Star the few moves that drive most of the result. They float to the top and Claude favors them when it helps you pick your day.</p></div>
+      <div><h3>Projects hold the context</h3><p>The salon, a trip, a training block: a project keeps its purpose and every goal under it. When you ask Claude for the next goals, it reads what’s already there and builds on it.</p></div>
+      <div><h3>Big 3 and the evening review</h3><p>Each morning, pick three moves that would make today a win. Each evening, rate yourself on Brendon Burchard’s six high performance habits:</p></div>
+      <ul class="habits">${HABITS.map((hb) => html`<li key=${hb.key}><b>${hb.label}</b>${hb.q}</li>`)}</ul>
+      <div><h3>Nothing silently disappears</h3><p>Unfinished moves roll into Today as carried over. If one slips three times, shrink it with Claude or drop it.</p></div>
+    </section>
+  </div>`;
+}
+
+function CrewCard({ uid }) {
+  const t = todayIso();
+  const d = getLog(uid, 'd-' + t) || {};
+  const ws = weekStart(t), we = addDays(ws, 6);
+  const words = (d.words || []).filter(Boolean);
+  const big = (d.big3 || []).filter((x) => x && C('actions').has(x)).map((x) => C('actions').get(x));
+  const score = scoreOf(d);
+  const wk = actions().filter((a) => a.ownerId === uid && a.day && a.day >= ws && a.day <= we);
+  const projs = projects().filter((p) => (p.status || 'active') === 'active' && p.ownerId === uid).length;
+  const st = streak(uid);
+  const val = uid === S.me ? 'me' : uid;
+  return html`<article class="card ccard">
+    <div class="ccard-h">
+      <${Avatar} uid=${uid} size=${42}/>
+      <div><div class="ccard-name">${uid === S.me ? (S.profiles[uid] && S.profiles[uid].name ? S.profiles[uid].name + ' (you)' : 'You') : nameOf(uid)}</div><div class="hint">${st ? `${st}-day planning streak` : 'No streak yet'}</div></div>
+      ${score > 0 && html`<div class="ccard-score"><span class="display num">${score}</span><div class="hint">/30 today</div></div>`}
+    </div>
+    ${words.length > 0 && html`<div class="ccard-words display">${words.join(' · ')}</div>`}
+    ${big.length
+      ? html`<ul class="ccard-big" aria-label="Big 3 today">${big.map((a) => html`<li key=${a.id} class=${a.done ? 'done' : ''}><span class=${'mini-check' + (a.done ? ' on' : '')} aria-hidden="true">${a.done && html`<${Ic} n="check" s=${11}/>`}</span><span>${a.title}<span class="sr">${a.done ? ' (done)' : ''}</span></span></li>`)}</ul>`
+      : html`<p class="hint">No Big 3 picked today.</p>`}
+    ${d.win && html`<p class="why">Win: ${d.win}</p>`}
+    <div class="ccard-stats"><span><b class="num">${wk.filter((a) => a.done).length}</b>/<span class="num">${wk.length}</span> moves this week</span><span><b class="num">${projs}</b> active project${projs === 1 ? '' : 's'}</span></div>
+    <div class="btn-row"><button class="btn btn-sm" onClick=${() => ui({ tab: 'plan', plan: 'week', weekOf: null, who: val })}>See week</button><button class="btn btn-sm" onClick=${() => ui({ tab: 'projects', projectId: null, who: val })}>See projects</button></div>
+  </article>`;
+}
+
+/* ───────────── Sheets ───────────── */
+
+function ActionSheet({ id }) {
+  const [del, setDel] = useState(false);
+  const a = C('actions').get(id);
+  if (!a) return html`<${Sheet} title="Move"><p class="hint">This move was deleted.</p><//>`;
+  const ro = S.readOnly || !S.me;
+  const set = (patch) => patchDoc('actions', id, patch);
+  const custom = !MINUTE_CHOICES.includes(a.minutes || 30);
+  return html`<${Sheet} title="Move">
+    <div class="form">
+      <${Auto} id="a-title" cls="input" value=${a.title} label="Move" maxLength=${160} disabled=${ro} onSave=${(v) => v.trim() && set({ title: v.trim() })}/>
+      <div class="chips">
+        <button class="chip" aria-pressed=${String(!!a.done)} disabled=${ro} onClick=${() => toggleDone(a)}><${Ic} n="check" s=${16}/>${a.done ? 'Done' : 'Mark done'}</button>
+        <button class="chip" aria-pressed=${String(!!a.key)} disabled=${ro} onClick=${() => set({ key: !a.key })}><${Ic} n="star" s=${15} fill=${a.key}/>Key move</button>
+      </div>
+      <div class="field"><span>When</span><${DayChips} value=${a.day} onChange=${(d) => set({ day: d })}/></div>
+      <div class="field"><span>Time</span><div class="chips">
+        ${MINUTE_CHOICES.map((m) => html`<button class="chip num" aria-pressed=${String((a.minutes || 30) === m)} disabled=${ro} onClick=${() => set({ minutes: m })}>${mins(m)}</button>`)}
+        ${custom && html`<span class="chip num" aria-pressed="true">${mins(a.minutes)}</span>`}
+      </div></div>
+      <label class="field"><span>Goal or project</span><${TargetSelect} id="a-target" value=${targetOf(a)} onChange=${(v) => set(targetPatch(v))}/></label>
+      <label class="field"><span>Who’s doing it</span><${PersonSelect} id="a-owner" value=${a.ownerId} onChange=${(v) => set({ ownerId: v })}/></label>
+      <label class="field"><span>Notes</span><${Auto} multiline id="a-notes" cls="textarea" rows=${2} value=${a.notes} placeholder="Links, details, who to call…" label="Notes" maxLength=${1000} disabled=${ro} onSave=${(v) => set({ notes: v.trim() })}/></label>
+      ${(a.carried || 0) > 0 && html`<p class="hint">Moved ${a.carried} time${a.carried === 1 ? '' : 's'}.</p>`}
+      ${!ro && (del
+        ? html`<div class="btn-row"><button class="btn btn-danger" onClick=${() => { deleteDoc('actions', id); closeSheet(); toast('Move deleted'); }}>Delete move</button><button class="btn" onClick=${() => setDel(false)}>Cancel</button></div>`
+        : html`<button class="btn btn-ghost btn-danger" style="justify-self:start" onClick=${() => setDel(true)}>Delete…</button>`)}
+    </div>
+  <//>`;
+}
+
+function DueChips({ value, onChange }) {
+  const t = todayIso();
+  const opts = [['2 weeks', addDays(t, 14)], ['30 days', addDays(t, 30)], ['90 days', addDays(t, 90)], ['Year end', t.slice(0, 4) + '-12-31']];
+  return html`<div class="chips">
+    ${opts.map(([l, d]) => html`<button type="button" class="chip" aria-pressed=${String(value === d)} disabled=${S.readOnly} onClick=${() => onChange(d)}>${l}</button>`)}
+    <input type="date" class="select-inline" aria-label="Deadline" value=${value || ''} disabled=${S.readOnly} onChange=${(e) => onChange(e.currentTarget.value || null)}/>
+  </div>`;
+}
+
+function GoalSheet({ id, projectId }) {
+  const [draft, setDraft] = useState({ kind: 'goal', title: '', why: '', due: null, ownerId: S.me, projectId: projectId || '', newTitle: '', area: 'work' });
+  const [del, setDel] = useState(false);
+  const g = id ? C('goals').get(id) : null;
+  if (id && !g) return html`<${Sheet} title="Goal"><p class="hint">This goal was deleted.</p><//>`;
+  const ro = S.readOnly || !S.me;
+
+  if (g) {
+    const set = (patch) => patchDoc('goals', id, patch);
+    const p = C('projects').get(g.projectId);
+    const n = goalActions(id).length;
+    return html`<${Sheet} title=${g.kind === 'mini' ? 'Mini-project' : 'Goal'}>
+      <div class="form">
+        ${p && html`<button class="ctx btn-ghost btn btn-sm" style="justify-self:start" onClick=${() => { closeSheet(); ui({ tab: 'projects', projectId: p.id }); }}><i style=${{ background: areaColor(p.area) }}></i>${p.title}<${Ic} n="chevR" s=${14}/></button>`}
+        <div class="seg" role="group" aria-label="Kind">${[['goal', 'Goal'], ['mini', 'Mini-project']].map(([k, l]) => html`<button aria-pressed=${String((g.kind || 'goal') === k)} disabled=${ro} onClick=${() => set({ kind: k })}>${l}</button>`)}</div>
+        <label class="field"><span>Result · what exactly do you want?</span><${Auto} id="g-title" cls="input" value=${g.title} label="Result" maxLength=${160} disabled=${ro} onSave=${(v) => v.trim() && set({ title: v.trim() })}/></label>
+        <label class="field"><span>Purpose · why is it a must?</span><${Auto} multiline id="g-why" cls="textarea" value=${g.why} placeholder="Who needs you to do this? What does it make possible?" label="Purpose" maxLength=${800} disabled=${ro} onSave=${(v) => set({ why: v.trim() })}/></label>
+        <div class="field"><span>Deadline</span><${DueChips} value=${g.due} onChange=${(d) => set({ due: d })}/></div>
+        <label class="field"><span>Owner</span><${PersonSelect} id="g-owner" value=${g.ownerId} onChange=${(v) => set({ ownerId: v })}/></label>
+        <div class="field"><span>Status</span><div class="seg" role="group" aria-label="Status">${[['active', 'Active'], ['done', 'Done'], ['dropped', 'Dropped']].map(([k, l]) => html`<button aria-pressed=${String(g.status === k)} disabled=${ro} onClick=${() => set({ status: k, doneAt: k === 'done' ? Date.now() : null })}>${l}</button>`)}</div></div>
+        <p class="hint num">${progress(goalActions(id)).d}/${n} moves done.</p>
+        ${!ro && (del
+          ? html`<p>Delete this goal and its ${n} move${n === 1 ? '' : 's'}?</p><div class="btn-row"><button class="btn btn-danger" onClick=${() => { deleteGoal(id); closeSheet(); toast('Goal deleted'); }}>Delete goal</button><button class="btn" onClick=${() => setDel(false)}>Cancel</button></div>`
+          : html`<button class="btn btn-ghost btn-danger" style="justify-self:start" onClick=${() => setDel(true)}>Delete…</button>`)}
+      </div>
+    <//>`;
+  }
+
+  const d = draft;
+  const upd = (patch) => setDraft({ ...d, ...patch });
+  const ps = projects().filter((x) => (x.status || 'active') !== 'done').sort((a, b) => a.title.localeCompare(b.title));
+  const newProj = d.projectId === '__new';
+  const ctxProject = !newProj && C('projects').get(d.projectId);
+  const siblings = ctxProject ? projectGoals(ctxProject.id).filter((x) => x.status === 'active') : [];
+  const canAdd = !ro && d.title.trim() && (newProj ? d.newTitle.trim() : d.projectId);
+  const add = () => {
+    let pid = d.projectId;
+    if (newProj) pid = createDoc('projects', { title: d.newTitle.trim(), why: '', area: d.area, ownerId: S.me, status: 'active' });
+    if (!pid) return;
+    addGoalWithActions(pid, { kind: d.kind, title: d.title.trim(), why: d.why.trim(), due: d.due, ownerId: d.ownerId });
+    closeSheet(); toast('Goal added');
+  };
+  return html`<${Sheet} title="New goal" foot=${html`<button class="btn btn-pri" disabled=${!canAdd} onClick=${add}>Add goal</button>`}>
+    <div class="form">
+      <label class="field"><span>Project</span>
+        <select id="ng-project" class="select" value=${d.projectId} onChange=${(e) => upd({ projectId: e.currentTarget.value })}>
+          <option value="" disabled>Choose a project</option>
+          ${ps.map((x) => html`<option value=${x.id}>${x.title}</option>`)}
+          <option value="__new">New project…</option>
+        </select>
+      </label>
+      ${newProj && html`<div class="form">
+        <input id="ng-newtitle" class="input" placeholder="Project name, e.g. Salon" value=${d.newTitle} onInput=${(e) => upd({ newTitle: e.currentTarget.value })} maxLength="80" aria-label="New project name"/>
+        <div class="chips" role="group" aria-label="Life area">${AREAS.map((a) => html`<button class="chip" aria-pressed=${String(d.area === a.key)} onClick=${() => upd({ area: a.key })}><span class="area" style=${{ '--c': areaColor(a.key) }}><i></i></span>${a.label}</button>`)}</div>
+      </div>`}
+      ${siblings.length > 0 && html`<div class="context-list"><span class="label">Already in ${ctxProject.title}</span>${siblings.slice(0, 6).map((x) => html`<span key=${x.id}>• ${x.title}</span>`)}</div>`}
+      <div class="seg" role="group" aria-label="Kind">${[['goal', 'Goal'], ['mini', 'Mini-project']].map(([k, l]) => html`<button aria-pressed=${String(d.kind === k)} onClick=${() => upd({ kind: k })}>${l}</button>`)}</div>
+      <label class="field"><span>Result · what exactly do you want?</span><input id="ng-title" class="input" value=${d.title} onInput=${(e) => upd({ title: e.currentTarget.value })} placeholder=${d.kind === 'mini' ? 'e.g. Launch online booking' : 'e.g. 20 color appointments a week'} maxLength="160"/></label>
+      <p class="hint">Make it specific enough that you’d know the moment it’s done.</p>
+      <label class="field"><span>Purpose · why is it a must?</span><textarea id="ng-why" class="textarea" rows="3" value=${d.why} onInput=${(e) => upd({ why: e.currentTarget.value })} placeholder="Who needs you to do this? What does it make possible?" maxLength="800"></textarea></label>
+      <div class="field"><span>Deadline</span><${DueChips} value=${d.due} onChange=${(v) => upd({ due: v })}/></div>
+      <label class="field"><span>Owner</span><${PersonSelect} id="ng-owner" value=${d.ownerId} onChange=${(v) => upd({ ownerId: v })}/></label>
+      ${ctxProject && aiReady() && html`<button class="btn btn-ai" style="justify-self:start" onClick=${() => openSheet('suggest', { projectId: ctxProject.id, steer: d.title.trim() })}><${Ic} n="spark" s=${16}/>Not sure? Let Claude draft it</button>`}
+    </div>
+  <//>`;
+}
+
+function ProjectSheet() {
+  const [d, setD] = useState({ title: '', area: 'work', why: '', ownerId: S.me });
+  const upd = (patch) => setD({ ...d, ...patch });
+  const add = () => {
+    const id = createDoc('projects', { title: d.title.trim(), area: d.area, why: d.why.trim(), ownerId: d.ownerId || S.me, status: 'active' });
+    if (!id) return;
+    closeSheet(); ui({ tab: 'projects', projectId: id });
+  };
+  return html`<${Sheet} title="New project" foot=${html`<button class="btn btn-pri" disabled=${!d.title.trim() || S.readOnly} onClick=${add}>Create project</button>`}>
+    <div class="form">
+      <label class="field"><span>Name</span><input id="np-title" class="input" value=${d.title} onInput=${(e) => upd({ title: e.currentTarget.value })} placeholder="e.g. Salon, Marathon, Japan trip" maxLength="80"/></label>
+      <div class="field"><span>Life area</span><div class="chips" role="group" aria-label="Life area">${AREAS.map((a) => html`<button class="chip" aria-pressed=${String(d.area === a.key)} onClick=${() => upd({ area: a.key })}><span class="area" style=${{ '--c': areaColor(a.key) }}><i></i></span>${a.label}</button>`)}</div></div>
+      <label class="field"><span>Why it matters</span><textarea id="np-why" class="textarea" rows="3" value=${d.why} onInput=${(e) => upd({ why: e.currentTarget.value })} placeholder="What will this make possible? Who’s counting on you?" maxLength="1200"></textarea></label>
+      <label class="field"><span>Owner</span><${PersonSelect} id="np-owner" value=${d.ownerId} onChange=${(v) => upd({ ownerId: v })}/></label>
+    </div>
+  <//>`;
+}
+
+function SuggestSheet({ projectId, steer: initialSteer }) {
+  const [steer, setSteer] = useState(initialSteer || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [items, setItems] = useState(null);
+  const [added, setAdded] = useState({});
+  const ctl = useRef(null);
+  const ran = useRef(0);
+  useEffect(() => () => ctl.current && ctl.current.abort(), []);
+  const p = C('projects').get(projectId);
+  if (!p) return html`<${Sheet} title="Suggestions"><p class="hint">This project was deleted.</p><//>`;
+  const run = async () => {
+    if (ctl.current) ctl.current.abort();
+    ctl.current = new AbortController();
+    setBusy(true); setErr('');
+    try { const list = await suggestGoals(p, steer.trim(), ran.current++ > 0, ctl.current.signal); setItems(list); setAdded({}); if (!list.length) setErr('Claude didn’t return any goals. Try again with a hint.'); }
+    catch (e) { const m = aiError(e); if (m) setErr(m); }
+    finally { setBusy(false); }
+  };
+  const take = (s, i) => {
+    const sel = { ...s, actions: s.actions.filter((a) => a.sel) };
+    if (addGoalWithActions(p.id, sel)) { setAdded({ ...added, [i]: true }); toast('Goal added to ' + p.title); }
+  };
+  return html`<${Sheet} title=${'Next goals for ' + p.title}>
+    <p class="hint">Claude reads this project’s purpose and every goal in it, then suggests what comes next.</p>
+    <label class="field"><span>Steer it (optional)</span><input id="sg-steer" class="input" value=${steer} onInput=${(e) => setSteer(e.currentTarget.value)} placeholder="e.g. more Instagram bookings, hire a stylist" maxLength="300" onKeyDown=${(e) => { if (e.key === 'Enter' && !busy) run(); }}/></label>
+    ${busy
+      ? html`<${Thinking} text=${'Claude is reading ' + p.title + '…'} onStop=${() => ctl.current && ctl.current.abort()}/>`
+      : html`<button class="btn btn-ai" style="justify-self:start" onClick=${run}><${Ic} n="spark" s=${16}/>${items ? 'Suggest different ones' : 'Suggest 3 goals'}</button>`}
+    ${err && html`<p class="err" role="alert">${err}</p>`}
+    ${items && items.length > 0 && html`<div class="props">${items.map((s, i) => html`<div class="prop" key=${i}>
+      <div class="prop-h"><div>
+        <span class="kind">${s.kind === 'mini' ? 'Mini-project' : 'Goal'} · ${dueText(s.due)}</span>
+        <b>${s.title}</b>
+        ${s.why && html`<p class="why">${s.why}</p>`}
+      </div></div>
+      <ul>${s.actions.map((a, j) => html`<li key=${j}><label class="tick" style="border:0;padding:2px 0;flex:1"><input type="checkbox" checked=${a.sel} disabled=${added[i]} onChange=${() => { const next = items.slice(); next[i] = { ...s, actions: s.actions.map((x, k) => (k === j ? { ...x, sel: !x.sel } : x)) }; setItems(next); }}/><span><span>${a.key && html`<span class="key"><${Ic} n="star" s=${13} fill/></span>`}${a.title}</span></span></label><span class="num">${mins(a.minutes)}</span></li>`)}</ul>
+      ${added[i] ? html`<p class="win">Added</p>` : html`<button class="btn btn-pri btn-sm" style="justify-self:start" onClick=${() => take(s, i)}><${Ic} n="plus" s=${15}/>Add to ${p.title}</button>`}
+    </div>`)}</div>`}
+  <//>`;
+}
+
+// Shared by "Plan moves" (goal) and "Break it down" (slipping move).
+function ProposalSheet({ title, intro, load, apply, applyLabel, busyText }) {
+  const [busy, setBusy] = useState(true);
+  const [err, setErr] = useState('');
+  const [items, setItems] = useState([]);
+  const ctl = useRef(null);
+  const n = useRef(0);
+  const run = async () => {
+    if (ctl.current) ctl.current.abort();
+    ctl.current = new AbortController();
+    setBusy(true); setErr('');
+    try { const list = await load(n.current++ > 0, ctl.current.signal); setItems(list); if (!list.length) setErr('Claude didn’t return any moves. Try again.'); }
+    catch (e) { const m = aiError(e); if (m) setErr(m); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { run(); return () => ctl.current && ctl.current.abort(); }, []);
+  const chosen = items.filter((x) => x.sel);
+  return html`<${Sheet} title=${title} foot=${!busy && items.length > 0 && html`<button class="btn btn-pri" disabled=${!chosen.length} onClick=${() => { apply(chosen); closeSheet(); }}>${applyLabel(chosen.length)}</button><button class="btn" onClick=${run}>Try again</button>`}>
+    ${intro && html`<p class="hint">${intro}</p>`}
+    ${busy && html`<${Thinking} text=${busyText} onStop=${() => ctl.current && ctl.current.abort()}/>`}
+    ${err && html`<p class="err" role="alert">${err}</p>`}
+    ${!busy && err && !items.length && html`<button class="btn" style="justify-self:start" onClick=${run}>Try again</button>`}
+    ${!busy && items.length > 0 && html`<div>${items.map((a, i) => html`<label class="tick" key=${i}>
+      <input type="checkbox" checked=${a.sel} onChange=${() => setItems(items.map((x, k) => (k === i ? { ...x, sel: !x.sel } : x)))}/>
+      <span><span>${a.key && html`<span class="key"><${Ic} n="star" s=${13} fill/></span>`}${a.title}</span><span class="hint num">${mins(a.minutes)}${a.key ? ' · key move' : ''}</span></span>
+    </label>`)}</div>`}
+  <//>`;
+}
+function MovesSheet({ goalId }) {
+  const g = C('goals').get(goalId);
+  if (!g) return html`<${Sheet} title="Plan moves"><p class="hint">This goal was deleted.</p><//>`;
+  return html`<${ProposalSheet} title="Plan the moves" intro=${'Massive action plan for: ' + g.title} busyText="Claude is planning the moves…"
+    load=${(fresh, signal) => planMoves(g, fresh, signal)}
+    apply=${(list) => { list.forEach((a) => newAction({ ...a, goalId: g.id })); toast(`Added ${list.length} move${list.length === 1 ? '' : 's'}`); }}
+    applyLabel=${(n) => `Add ${n} move${n === 1 ? '' : 's'}`}/>`;
+}
+function BreakdownSheet({ id }) {
+  const a = C('actions').get(id);
+  if (!a) return html`<${Sheet} title="Break it down"><p class="hint">This move was deleted.</p><//>`;
+  return html`<${ProposalSheet} title="Break it down" intro=${'Smaller steps for: ' + a.title} busyText="Claude is shrinking it…"
+    load=${(fresh, signal) => breakDown(a, signal)}
+    apply=${(list) => { const t = todayIso(); list.forEach((s, i) => newAction({ ...s, goalId: a.goalId, projectId: a.projectId, ownerId: a.ownerId, day: i === 0 ? t : null })); deleteDoc('actions', a.id); toast('Replaced with smaller steps. The first one is on today.'); }}
+    applyLabel=${(n) => `Replace with ${n} step${n === 1 ? '' : 's'}`}/>`;
+}
+
+function CaptureSheet() {
+  const [text, setText] = useState('');
+  const [day, setDay] = useState(todayIso());
+  const [target, setTarget] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [items, setItems] = useState(null);
+  const ctl = useRef(null);
+  useEffect(() => { const el = document.getElementById('cap-text'); if (el) el.focus({ preventScroll: true }); return () => ctl.current && ctl.current.abort(); }, []);
+  const lines = text.split('\n').map((s) => s.replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+  const quickAdd = () => {
+    lines.forEach((l) => newAction({ ...parseQuick(l), day, ...targetPatch(target) }));
+    toast(`Added ${lines.length} move${lines.length === 1 ? '' : 's'}`);
+    closeSheet();
+  };
+  const sort = async () => {
+    if (ctl.current) ctl.current.abort();
+    ctl.current = new AbortController();
+    setBusy(true); setErr('');
+    try { const list = await sortDump(text, ctl.current.signal); setItems(list); if (!list.length) setErr('Claude didn’t find anything to add. Try adding more detail.'); }
+    catch (e) { const m = aiError(e); if (m) setErr(m); }
+    finally { setBusy(false); }
+  };
+  const dest = (it) => {
+    if (it.goalId) return C('goals').get(it.goalId).title;
+    if (it.projectId) return C('projects').get(it.projectId).title;
+    if (it.newProject) return 'New project: ' + it.newProject.title;
+    return 'Loose move';
+  };
+  const apply = () => {
+    const made = new Map();
+    let n = 0;
+    for (const it of items.filter((x) => x.sel)) {
+      let pid = it.projectId;
+      if (!pid && it.newProject) {
+        const k = it.newProject.title.toLowerCase();
+        if (!made.has(k)) made.set(k, createDoc('projects', { title: it.newProject.title, area: it.newProject.area, why: '', ownerId: S.me, status: 'active' }));
+        pid = made.get(k);
+      }
+      if (it.type === 'goal' && pid) addGoalWithActions(pid, { kind: 'goal', title: it.title, why: it.why, due: it.day, actions: it.actions });
+      else newAction({ title: it.title, minutes: it.minutes, day: it.day, goalId: it.goalId, projectId: pid });
+      n++;
+    }
+    toast(`Added ${n} item${n === 1 ? '' : 's'}`);
+    closeSheet();
+  };
+
+  if (items && items.length) {
+    const chosen = items.filter((x) => x.sel).length;
+    return html`<${Sheet} title="Sorted" foot=${html`<button class="btn btn-pri" disabled=${!chosen} onClick=${apply}>Add ${chosen} item${chosen === 1 ? '' : 's'}</button><button class="btn" onClick=${() => setItems(null)}>Back</button>`}>
+      <p class="hint">Claude chunked your dump into results and moves. Untick anything you don’t want.</p>
+      <div>${items.map((it, i) => html`<label class="tick" key=${i}>
+        <input type="checkbox" checked=${it.sel} onChange=${() => setItems(items.map((x, k) => (k === i ? { ...x, sel: !x.sel } : x)))}/>
+        <span>
+          <span class="kind">${it.type === 'goal' ? 'New goal' : 'Move'}</span>
+          <b style="font-weight:600">${it.title}</b>
+          <span class="row-meta"><span>${dest(it)}</span>${it.type === 'action' && html`<span class="num">${mins(it.minutes)}</span>`}${it.day && html`<span>${it.type === 'goal' ? dueText(it.day) : relDay(it.day)}</span>`}${it.actions.length > 0 && html`<span class="num">${it.actions.length} move${it.actions.length === 1 ? '' : 's'}</span>`}</span>
+        </span>
+      </label>`)}</div>
+    <//>`;
+  }
+
+  return html`<${Sheet} title="Capture" foot=${html`
+    <button class="btn btn-pri" disabled=${!lines.length || busy} onClick=${quickAdd}>Add ${lines.length > 1 ? lines.length + ' moves' : 'move'}</button>
+    ${aiReady() && html`<button class="btn btn-ai" disabled=${!text.trim() || busy} onClick=${sort}><${Ic} n="spark" s=${16}/>Sort with Claude</button>`}`}>
+    <textarea id="cap-text" class="textarea" rows="6" value=${text} onInput=${(e) => setText(e.currentTarget.value)} placeholder=${'Get it all out of your head. One per line, or a messy paragraph.\n\nOrder color stock 15m\nPost before/after photos\nIdea: loyalty card for regulars'} aria-label="What's on your mind" maxLength="6000"></textarea>
+    ${busy && html`<${Thinking} text="Claude is sorting it into your projects…" onStop=${() => ctl.current && ctl.current.abort()}/>`}
+    ${err && html`<p class="err" role="alert">${err}</p>`}
+    <div class="field"><span>Add each line as a move for</span><${DayChips} value=${day} onChange=${setDay}/></div>
+    <label class="field"><span>Under</span><${TargetSelect} id="cap-target" value=${target} onChange=${setTarget}/></label>
+    ${aiReady() && html`<p class="hint">Or let Claude sort a messy dump: it files each item under the right project or goal, and proposes new goals where nothing fits.</p>`}
+  <//>`;
+}
+
+function Big3Sheet({ slot }) {
+  const [q, setQ] = useState('');
+  const t = todayIso();
+  const day = getLog(S.me, 'd-' + t) || {};
+  const taken = new Set((day.big3 || []).filter(Boolean));
+  const cands = big3Candidates().filter((a) => !taken.has(a.id));
+  const candSet = new Set(cands.map((a) => a.id));
+  const more = actions().filter((a) => a.ownerId === S.me && !a.done && !taken.has(a.id) && !candSet.has(a.id)).sort(byDone);
+  const match = (a) => !q.trim() || a.title.toLowerCase().includes(q.trim().toLowerCase());
+  const pick = (id) => { setBig(slot, id); closeSheet(); };
+  const row = (a) => { const p = projectOf(a); const g = a.goalId && C('goals').get(a.goalId); return html`<button key=${a.id} class="row" style="width:100%" onClick=${() => pick(a.id)}>
+    <span class="slot-n" aria-hidden="true" style="font-size:22px">${slot + 1}</span>
+    <span class="row-main"><span class="row-title">${a.key && html`<span class="key"><${Ic} n="star" s=${13} fill/></span>`}${a.title}</span>
+      <span class="row-meta">${p && html`<span class="ctx"><i style=${{ background: areaColor(p.area) }}></i>${g ? g.title : p.title}</span>`}${a.day && html`<span class=${a.day < t ? 'late' : ''}>${relDay(a.day)}</span>`}<span class="num">${mins(a.minutes || 30)}</span></span></span>
+  </button>`; };
+  const c1 = cands.filter(match), c2 = more.filter(match);
+  return html`<${Sheet} title=${'Big 3 · move ' + (slot + 1)}>
+    <form class="form" onSubmit=${(e) => { e.preventDefault(); const p = parseQuick(q); if (!p.title) return; const id = newAction({ ...p, day: t }); if (id) pick(id); }}>
+      <input id="b3-q" class="input" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} placeholder="Search your moves, or type a new one" aria-label="Search or add a move" autocomplete="off" enterkeyhint="go"/>
+      ${q.trim() && html`<button class="btn btn-pri" type="submit" style="justify-self:start"><${Ic} n="plus" s=${16}/>Add “${parseQuick(q).title}” as a new move</button>`}
+    </form>
+    ${c1.length > 0 && html`<div class="field"><span class="label">Suggested: key, due, carried over, this week’s outcomes</span><div class="list">${c1.map(row)}</div></div>`}
+    ${c2.length > 0 && html`<div class="field"><span class="label">All open moves</span><div class="list">${c2.slice(0, 40).map(row)}</div></div>`}
+    ${!c1.length && !c2.length && html`<p class="hint">${q.trim() ? 'No match. Press enter to add it as a new move.' : 'No open moves yet. Type one above.'}</p>`}
+  <//>`;
+}
+
+function FocusSheet({ week }) {
+  const key = 'w-' + week;
+  const focus = (getLog(S.me, key) || {}).focus || [];
+  const active = goals().filter((g) => g.status === 'active');
+  const mineFirst = (g) => (g.ownerId === S.me ? 0 : 1);
+  const byProject = groupBy(active.sort((a, b) => mineFirst(a) - mineFirst(b) || (a.due || '9999').localeCompare(b.due || '9999')), (g) => g.projectId);
+  const toggle = (id) => saveLog(key, { week, focus: focus.includes(id) ? focus.filter((x) => x !== id) : [...focus, id] });
+  return html`<${Sheet} title="Outcomes this week" foot=${html`<button class="btn btn-pri" onClick=${closeSheet}>Done · ${focus.length} chosen</button>`}>
+    <p class="hint">Which results would make this week a win? Three to five is plenty.${focus.length > 5 ? ' You have more than five: consider cutting.' : ''}</p>
+    ${[...byProject.entries()].map(([pid, list]) => { const p = C('projects').get(pid); return html`<div class="field" key=${pid}>
+      <span class="label">${p ? p.title : 'No project'}</span>
+      <div>${list.map((g) => html`<label class="tick" key=${g.id}>
+        <input type="checkbox" checked=${focus.includes(g.id)} onChange=${() => toggle(g.id)}/>
+        <span><span>${g.title}</span><span class="row-meta">${g.due && html`<span class=${dueCls(g)}>${dueText(g.due)}</span>`}<span class="num">${progress(goalActions(g.id)).d}/${goalActions(g.id).length} moves</span>${g.ownerId && g.ownerId !== S.me && html`<span>${firstName(g.ownerId)}’s</span>`}</span></span>
+      </label>`)}</div>
+    </div>`; })}
+    ${!active.length && html`<div class="empty"><span>No active goals yet. Create a project and give it a goal first.</span><button class="btn btn-sm btn-pri" onClick=${() => openSheet('goal', {})}>New goal</button></div>`}
+  <//>`;
+}
+
+function LooseSheet() {
+  const list = actions().filter((a) => !a.projectId && !a.goalId && !a.done && (whoId() ? a.ownerId === whoId() : true)).sort(byDone);
+  return html`<${Sheet} title="Loose moves">
+    <p class="hint">Moves that don’t belong to a project yet. Tap one to file it under a goal.</p>
+    <div class="list">${list.map((a) => html`<${ActionRow} key=${a.id} a=${a} day=${true}/>`)}</div>
+    ${!list.length && html`<p class="hint">All filed.</p>`}
+  <//>`;
+}
+
+const SHEETS = { action: ActionSheet, goal: GoalSheet, project: ProjectSheet, suggest: SuggestSheet, moves: MovesSheet, breakdown: BreakdownSheet, capture: CaptureSheet, big3: Big3Sheet, focus: FocusSheet, loose: LooseSheet };
+
+/* ───────────── App ───────────── */
+
+function App() {
+  const [, force] = useState(0);
+  useEffect(() => { const f = () => force((x) => x + 1); subs.add(f); f(); return () => subs.delete(f); }, []);
+  useEffect(() => { refreshProfiles(); });
+  useEffect(() => { try { localStorage.setItem('gs.ui', JSON.stringify({ tab: UI.tab, plan: UI.plan })); } catch (e) { /* storage unavailable */ } }, [UI.tab, UI.plan]);
+  let view;
+  if (UI.tab === 'plan') view = html`<${PlanView}/>`;
+  else if (UI.tab === 'projects') view = UI.projectId ? html`<${ProjectDetail} key=${UI.projectId} id=${UI.projectId}/>` : html`<${ProjectsView}/>`;
+  else if (UI.tab === 'crew') view = html`<${CrewView}/>`;
+  else view = html`<${TodayView}/>`;
+  const sh = UI.sheet;
+  const SheetC = sh && SHEETS[sh.type];
+  return html`<div class="shell"><${TopBar}/><${Banners}/><main>${view}</main></div>
+    <${TabBar}/>
+    ${SheetC && html`<${SheetC} key=${sh.key} ...${sh.props}/>`}
+    ${UI.toast && html`<div class="toast" role="status">${UI.toast.msg}</div>`}`;
+}
+
+const use = (n) => {
+  try { return window.claude && typeof window.claude.use === 'function' ? Promise.resolve(window.claude.use(n)).catch(() => null) : Promise.resolve(null); }
+  catch (e) { return Promise.resolve(null); }
+};
+
+async function boot() {
+  const el = document.getElementById('app');
+  el.textContent = '';
+  render(html`<${App}/>`, el);
+  const userP = use('user');
+  use('sample').then((s) => { S.ai = s; emit(); });
+  const db = await use('db');
+  const user = await userP;
+  S.user = user;
+  if (db) {
+    DB = db; S.mode = 'live';
+    S.me = user ? await user.id() : null;
+    if (!S.me) S.readOnly = true;
+    else { S.canWrite = user ? await user.can('data.write') : null; if (S.canWrite === false) S.readOnly = true; }
+  } else {
+    DB = memoryDb(); S.mode = 'local'; S.me = 'you'; S.user = null; S.profiles.you = { name: '' };
+  }
+  ['projects', 'goals', 'actions', 'people'].forEach(listen);
+  if (S.me) listen(logCol(S.me));
+  emit();
+}
+boot();
+})();
+</script>
