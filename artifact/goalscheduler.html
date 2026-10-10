@@ -364,11 +364,13 @@ details.fold[open] > summary .chev { transform: rotate(90deg); }
 
 /* Sheets */
 .scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); animation: fade .15s ease-out; }
-.sheet { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 720px; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 20px 20px 0 0; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); animation: up .22s ease-out; outline: none; }
+.sheet { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 720px; max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border-radius: 20px 20px 0 0; animation: up .22s ease-out; outline: none; }
+.sheet-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.sheet.has-foot .sheet-scroll { padding-bottom: 16px; }
 .sheet-h { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px 10px; }
 .sheet-h::before { content: ""; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line); }
 .sheet-body { display: grid; gap: 14px; }
-.sheet-foot { position: sticky; bottom: 0; z-index: 2; margin: 12px -16px calc(-24px - env(safe-area-inset-bottom, 0px)); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+.sheet-foot { flex: none; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
 .sheet-foot .btn { flex: 1; min-height: 46px; }
 @keyframes up { from { transform: translateY(24px); opacity: 0; } }
 @keyframes fade { from { opacity: 0; } }
@@ -377,7 +379,6 @@ details.fold[open] > summary .chev { transform: rotate(90deg); }
 
 @media (min-width: 640px) {
   .sheet { bottom: auto; top: 6vh; border-radius: 20px; max-height: 88vh; box-shadow: var(--shadow); width: calc(100% - 32px); }
-  .sheet-foot { margin-bottom: -24px; padding-bottom: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -1053,9 +1054,11 @@ function Sheet({ title, children, foot }) {
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ov; if (prev && prev.focus) prev.focus({ preventScroll: true }); };
   }, []);
   return html`<div class="scrim" onClick=${closeSheet}></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label=${title} ref=${ref} tabindex="-1">
-    <div class="sheet-h"><h2 class="display h-m">${title}</h2><button class="icon-btn" aria-label="Close" onClick=${closeSheet}><${Ic} n="x"/></button></div>
-    <div class="sheet-body">${children}</div>
+  <div class=${'sheet' + (foot ? ' has-foot' : '')} role="dialog" aria-modal="true" aria-label=${title} ref=${ref} tabindex="-1">
+    <div class="sheet-scroll">
+      <div class="sheet-h"><h2 class="display h-m">${title}</h2><button class="icon-btn" aria-label="Close" onClick=${closeSheet}><${Ic} n="x"/></button></div>
+      <div class="sheet-body">${children}</div>
+    </div>
     ${foot && html`<div class="sheet-foot">${foot}</div>`}
   </div>`;
 }
